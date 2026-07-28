@@ -181,12 +181,25 @@ async def cb_share_phone(callback: CallbackQuery, state: FSMContext):
 @router.callback_query(F.data == "main_menu")
 async def cb_main_menu(callback: CallbackQuery, state: FSMContext):
     await state.clear()
-    await edit_with_retry(
-        callback.message,
-        messages.MAIN_MENU_TEXT,
-        reply_markup=keyboards.main_menu_kb(),
-        parse_mode="HTML"
-    )
+    # If message has media (e.g. portfolio photo), edit_text won't work
+    # Delete the media message and send a new text message instead
+    try:
+        await callback.message.edit_text(
+            messages.MAIN_MENU_TEXT,
+            reply_markup=keyboards.main_menu_kb(),
+            parse_mode="HTML"
+        )
+    except Exception as _e:
+        # Message has media — delete and send fresh
+        try:
+            await callback.message.delete()
+        except Exception:
+            pass
+        await callback.message.answer(
+            messages.MAIN_MENU_TEXT,
+            reply_markup=keyboards.main_menu_kb(),
+            parse_mode="HTML"
+        )
     await callback.answer()
 
 
