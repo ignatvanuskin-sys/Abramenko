@@ -82,7 +82,7 @@ class TestTimeSlotsKeyboard:
         kb = keyboards.time_slots_kb(slots)
         texts = [b.text for row in kb.inline_keyboard for b in row]
         assert any("Нет свободных слотов" in t for t in texts)
-        assert any("лист ожидания" in t or "waitlist" in t.lower() for t in texts)
+        assert any("Лист ожидания" in t or "waitlist" in t.lower() for t in texts)
 
 
 class TestBookingFlowWithoutMasterSelection:

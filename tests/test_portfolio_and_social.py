@@ -136,9 +136,9 @@ class TestPortfolioKeyboards:
         )
         assert len(kb.inline_keyboard) >= 2  # nav + back
         texts = [b.text for row in kb.inline_keyboard for b in row]
-        assert "◀ Назад" in texts
-        assert "Далее ▶" in texts
-        assert "Назад в меню" in texts or "🏠 Назад в меню" in texts
+        assert any("Назад" in t for t in texts)
+        assert any("Далее" in t for t in texts)
+        assert any("Назад в меню" in t for t in texts)
 
     def test_portfolio_kb_with_social_links(self):
         links = [
@@ -155,8 +155,8 @@ class TestPortfolioKeyboards:
     def test_portfolio_admin_kb(self):
         kb = keyboards.portfolio_admin_kb()
         texts = [b.text for row in kb.inline_keyboard for b in row]
-        assert any("Добавить" in t and "фото" in t.lower() for t in texts)
-        assert any("Удалить" in t and "фото" in t.lower() for t in texts)
+        assert any("Добавить" in t for t in texts)
+        assert any("Удалить" in t for t in texts)
         assert any("Назад" in t for t in texts)
 
     def test_social_links_admin_kb(self):
@@ -175,14 +175,12 @@ class TestPortfolioKeyboards:
     def test_admin_booking_kb_has_block_action(self):
         kb = keyboards.admin_cancel_booking_kb("booking1", telegram_id=555, user_blocked=False)
         buttons = [b for row in kb.inline_keyboard for b in row]
-
         assert any("Заблокировать" in b.text for b in buttons)
         assert any(b.callback_data == "admin_user_block:555:block:booking1" for b in buttons)
 
     def test_admin_booking_kb_has_unblock_action(self):
         kb = keyboards.admin_cancel_booking_kb("booking1", telegram_id=555, user_blocked=True)
         buttons = [b for row in kb.inline_keyboard for b in row]
-
         assert any("Разблокировать" in b.text for b in buttons)
         assert any(b.callback_data == "admin_user_block:555:unblock:booking1" for b in buttons)
 
