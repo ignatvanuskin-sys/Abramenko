@@ -409,25 +409,6 @@ async def main():
             logger.info("Graceful shutdown completed")
         except asyncio.TimeoutError:
             logger.warning(f"Shutdown timed out after {shutdown_timeout}s, forcing exit...")
-    except Exception as e:
-        logger.critical(f"Fatal error in main loop: {e}", exc_info=True)
-        # Notify admins even during fatal error
-        try:
-            from monitoring import increment_counter
-            increment_counter("errors_total")
-            for admin_id in config.ADMIN_IDS:
-                try:
-                    await bot.send_message(admin_id, f"⚠️ <b>Критическая ошибка</b>\n<code>{str(e)[:500]}</code>", parse_mode="HTML")
-                except Exception:
-                    pass
-        except Exception:
-            pass
-    finally:
-        try:
-            await asyncio.wait_for(_shutdown(bot, dp), timeout=shutdown_timeout)
-            logger.info("Graceful shutdown completed")
-        except asyncio.TimeoutError:
-            logger.warning(f"Shutdown timed out after {shutdown_timeout}s, forcing exit...")
 
 
 if __name__ == "__main__":
