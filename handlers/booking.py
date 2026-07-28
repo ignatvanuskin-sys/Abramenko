@@ -731,25 +731,6 @@ async def handle_enter_name(message: Message, state: FSMContext):
     await state.clear()
 
 
-@router.callback_query(F.data == "confirm")
-async def cb_confirm_deprecated(callback: CallbackQuery, state: FSMContext):
-    current_state = await state.get_state()
-    if current_state is not None:
-        await callback.answer(
-            "Вы в процессе записи. Завершите или отмените запись.",
-            show_alert=True
-        )
-        return
-    await state.clear()
-    await _safe_edit(
-        callback.message,
-        f"{E.INFO} Сессия устарела. Начните запись заново.",
-        reply_markup=keyboards.back_to_main_kb(),
-        parse_mode="HTML"
-    )
-    await callback.answer()
-
-
 @router.callback_query(F.data == "cancel_booking")
 async def cb_cancel_booking(callback: CallbackQuery, state: FSMContext):
     data = await state.get_data()

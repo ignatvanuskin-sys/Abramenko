@@ -242,20 +242,4 @@ class TestCbNoSlots:
         assert call_kwargs.get("show_alert") is True
 
 
-class TestCbConfirmDeprecated:
-    async def test_active_fsm_warns_user(self):
-        from handlers.booking import cb_confirm_deprecated
-        from handlers.booking import BookingStates
-        cb = make_callback(data="confirm")
-        fsm = make_fsm(state=str(BookingStates.enter_name))
-        await cb_confirm_deprecated(cb, fsm)
-        cb.answer.assert_called()
-        fsm.clear.assert_not_called()
-
-    async def test_no_fsm_shows_stale_message(self):
-        from handlers.booking import cb_confirm_deprecated
-        cb = make_callback(data="confirm")
-        fsm = make_fsm(state=None)
-        await cb_confirm_deprecated(cb, fsm)
-        fsm.clear.assert_called_once()
 

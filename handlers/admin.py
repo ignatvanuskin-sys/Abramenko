@@ -631,7 +631,7 @@ async def cb_admin_export(callback: CallbackQuery):
             file = FSInputFile(str(filepath))
             await callback.message.answer_document(
                 document=file,
-                caption=f"{E.CHART} Экспорт всех записей\nВсего: {len(bookings)} записей"
+                caption=f"{E.LIST} Экспорт всех записей\nВсего: {len(bookings)} записей"
             )
             await _audit(callback.from_user.id, "bookings_export", "booking", "csv", new_value=f"rows={len(bookings)}")
             await edit_with_retry(

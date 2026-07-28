@@ -155,7 +155,7 @@ async def _set_bot_commands(bot: Bot) -> None:
         BotCommand(command="me", description="Мой профиль и записи"),
         BotCommand(command="about", description="О мастере"),
         BotCommand(command="contacts", description="Контакты"),
-        BotCommand(command="master", description="Все нейл-мастера"),
+        BotCommand(command="master", description="О мастере"),
         BotCommand(command="waitlist", description="Мой лист ожидания"),
         BotCommand(command="cancel", description="Отменить запись"),
         BotCommand(command="help", description="Справка по командам"),
