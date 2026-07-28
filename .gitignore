@@ -1,0 +1,57 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+venv/
+venv*/
+.venv/
+.venv-test/
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# Database
+*.db
+*.db-wal
+*.db-shm
+*.db.gz
+*.sql.gz
+fsm_state.json
+fsm_state.json.bak
+data/*.db
+data/*.db-wal
+data/*.db-shm
+data/*.json
+data/*.bak
+
+# Backups
+backups/
+
+# Logs
+logs/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Coverage
+.coverage
+htmlcov/
+coverage.xml
+
+# Dev artifacts
+storage_sqlite_backup.py
+patch_fixes.py
+.kimchi/
+
+# Release artifacts
+*.zip

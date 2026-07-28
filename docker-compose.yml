@@ -1,0 +1,47 @@
+version: "3.8"
+
+services:
+  # L-3 FIX: local dev PostgreSQL; set DATABASE_URL=postgresql://nailshop:changeme@db:5432/nailshop
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: nailshop
+      POSTGRES_USER: nailshop
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+    volumes:
+      - nailshop_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nailshop"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  bot:
+    build: .
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - nailshop_data:/app/data
+      - nailshop_backups:/app/backups
+    # H-2 FIX: check bot process is alive, not just that a file can be created
+    healthcheck:
+      test: ["CMD", "python", "healthcheck.py"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  nailshop_data:
+  nailshop_backups:
+  nailshop_pgdata:

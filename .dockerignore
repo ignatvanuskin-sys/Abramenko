@@ -1,0 +1,58 @@
+# LOW-004/005 FIX: Exclude unnecessary files from Docker build
+__pycache__/
+.pytest_cache/
+.coverage
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+
+# Local data - Railway uses volumes
+data/
+backups/
+logs/
+*.db
+*.db.gz
+*.sql.gz
+*.zip
+fsm_state.json
+fsm_state.json.bak
+
+# Dev / test files
+venv/
+venv*/
+.venv/
+.venv-test/
+tests/
+*.test.py
+write_tests.py
+write_admin5.py
+patch_fixes.py
+pytest.ini
+
+# Scripts output
+scripts/
+
+# Env files
+.env
+.env.*
+!.env.example
+
+# IDE
+.vscode/
+.idea/
+.kimchi/
+*.swp
+*.swo
+
+# Git
+.git/
+.github/
+.gitignore
+
+# Docs
+README.md
+*.md

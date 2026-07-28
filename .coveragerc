@@ -1,0 +1,15 @@
+[run]
+omit =
+    storage_sqlite_backup.py
+    bot.py
+    patch_fixes.py
+    migrate_db.py
+    tests/*
+
+[report]
+omit =
+    storage_sqlite_backup.py
+    bot.py
+    patch_fixes.py
+    migrate_db.py
+    tests/*
