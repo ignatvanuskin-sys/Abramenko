@@ -65,24 +65,24 @@ async def _create_fsm_storage():
             logger.info("Using Redis FSM storage: %s", _mask_url(redis_url))
             return storage
         except Exception as e:
-            if config.REQUIRE_REDIS_FSM or config.APP_ENV in ("prod", "production"):
+            if config.REQUIRE_REDIS_FSM:
                 raise RuntimeError(
-                    f"REDIS_URL is required for production. Redis FSM unavailable: {e}"
+                    f"REDIS_URL is set but Redis FSM storage is unavailable: {e}"
                 ) from e
             logger.warning("Redis not available, falling back to FileStorage: %s", e)
 
-    # In production cluster mode, REQUIRE_REDIS_FSM is mandatory
-    if config.REQUIRE_REDIS_FSM or config.APP_ENV in ("prod", "production"):
+    # REQUIRE_REDIS_FSM is the definitive flag — overrides APP_ENV
+    if config.REQUIRE_REDIS_FSM:
         raise RuntimeError(
-            "REDIS_URL is required in production for cluster-safe FSM. "
-            "Set REDIS_URL env var or REQUIRE_REDIS_FSM=false for local/dev."
+            "REQUIRE_REDIS_FSM=true but no REDIS_URL found. "
+            "Set REDIS_URL env var or REQUIRE_REDIS_FSM=false."
         )
 
     from fsm_storage import FileStorage
 
     logger.warning(
         "Using FileStorage FSM (single-instance only). "
-        "Set REDIS_URL for production to preserve states across container restarts."
+        "Set REDIS_URL with REQUIRE_REDIS_FSM=true for cluster-safe FSM."
     )
     return FileStorage()
 
