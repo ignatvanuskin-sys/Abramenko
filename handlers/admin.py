@@ -890,13 +890,13 @@ async def cb_admin_settings(callback: CallbackQuery):
     try:
         text = (
             f"Настройки\n\n"
-            f"{E.LABEL} Название: {config.SALON_NAME}\n"
-            f"{E.LOCATION} Адрес: {config.SALON_ADDRESS}\n"
-            f"{E.PHONE} Телефон: {config.SALON_PHONE}\n"
-            f"{E.CLOCK} Часы работы: {config.SALON_WORKING_HOURS}\n"
-            f"{E.WOMAN} Мастер: {config.MASTER_NAME}\n"
-            f"{E.STAR} Опыт: {config.MASTER_EXPERIENCE}\n"
-            f"{E.NOTE} Описание: {config.MASTER_DESCRIPTION}"
+            f"{E.LABEL} Название: {html.escape(config.SALON_NAME)}\n"
+            f"{E.LOCATION} Адрес: {html.escape(config.SALON_ADDRESS)}\n"
+            f"{E.PHONE} Телефон: {html.escape(config.SALON_PHONE)}\n"
+            f"{E.CLOCK} Часы работы: {html.escape(config.SALON_WORKING_HOURS)}\n"
+            f"{E.WOMAN} Мастер: {html.escape(config.MASTER_NAME)}\n"
+            f"{E.STAR} Опыт: {html.escape(config.MASTER_EXPERIENCE)}\n"
+            f"{E.NOTE} Описание: {html.escape(config.MASTER_DESCRIPTION)}"
         )
         await edit_with_retry(callback.message, text, reply_markup=keyboards.admin_settings_kb())
     except Exception as e:
