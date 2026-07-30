@@ -94,6 +94,8 @@ CUSTOM_EMOJIS = {
     "👨‍💼": "5260399854500191689",  # Мастер - PREMIUM EMOJI
     "👨‍🎨": "5258450450448915742",  # Ножницы (стрижка)
     "📊": "5258330865674494479",  # График, статистика, анализ - PREMIUM EMOJI
+    "🏷": "5258461531464539536",  # Ярлык, название - PREMIUM EMOJI
+    "👩": "5260399854500191689",  # Женщина, мастер - PREMIUM EMOJI
 }
 
 
@@ -196,6 +198,8 @@ class E:
     POINT_DOWN = emoji("👇")  # Палец вниз, указатель
     ARROW_DOWN = emoji("⬇️")  # PREMIUM - стрелка вниз
     LINK = emoji("🔗")  # Ссылка
+    LABEL = emoji("🏷")  # PREMIUM - ярлык, название
+    WOMAN = emoji("👩")  # PREMIUM - женщина, мастер
 
 
 def check_emoji_config() -> dict:
