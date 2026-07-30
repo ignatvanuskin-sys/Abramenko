@@ -6,7 +6,7 @@ def welcome_text(name: str) -> str:
     """Генерирует приветственное сообщение с экранированием имени"""
     return (
         f"{E.BARBER} <b>Добро пожаловать в {html_module.escape(name)}!</b>\n\n"
-        f"{E.SCISSORS} Профессиональный маникюр, педикюр и nail-дизайн.\n\n"
+        f"{E.ARTIST_WOMAN} Профессиональный маникюр, педикюр и nail-дизайн.\n\n"
         "Выберите действие:"
     )
 
@@ -126,7 +126,7 @@ CONTACTS = (
 def about_master_text() -> str:
     import config as _cfg
     return (
-        f"{E.SCISSORS} <b>О мастере</b>\n\n"
+        f"{E.ARTIST_WOMAN} <b>О мастере</b>\n\n"
         f"Имя: <b>{html_module.escape(_cfg.MASTER_NAME)}</b>\n"
         f"Опыт: <b>{html_module.escape(_cfg.MASTER_EXPERIENCE)}</b>\n\n"
         f"{html_module.escape(_cfg.MASTER_DESCRIPTION)}\n\n"
@@ -355,7 +355,7 @@ INVITE_FRIEND = (
 
 INVITE_FRIEND_SHARE = (
     f"{E.BARBER} Я делаю маникюр у мастера <b>{{name}}</b>!\n\n"
-    f"{E.SCISSORS} Профессиональный nail-мастер, удобная онлайн-запись.\n"
+    f"{E.ARTIST_WOMAN} Профессиональный nail-мастер, удобная онлайн-запись.\n"
     "Записывайся и получи первую скидку!\n\n"
     "{link}"
 )

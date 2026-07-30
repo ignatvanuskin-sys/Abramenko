@@ -506,7 +506,7 @@ async def cb_choose_time(callback: CallbackQuery, state: FSMContext):
     data_so_far = await state.get_data()
     text = f"{E.LIST} <b>Шаг 4 из 4 — Ваше имя</b>\n\n"
     text += f"Вы записываетесь:\n"
-    text += f"{E.SCISSORS} {html.escape(data_so_far.get('service',''))}\n"
+    text += f"{E.ARTIST_WOMAN} {html.escape(data_so_far.get('service',''))}\n"
     text += f"{E.CALENDAR} {keyboards._format_date(data_so_far.get('date',''))} в {time_str}\n\n"
     text += f"{E.CLOCK} Длительность: {_format_duration(data_so_far.get('duration_minutes'))}\n\n"
     text += f"{E.USER} <b>Как к вам обращаться?</b>\n"

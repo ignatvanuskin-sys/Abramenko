@@ -114,7 +114,7 @@ async def auto_complete_booking(bot, booking: dict):
             # HIGH-03 FIX: html.escape all user-controlled fields in HTML message
             admin_text = f"{E.CHECK} <b>Запись завершена</b>\n\n"
             admin_text += f"{E.USER} <b>Клиент:</b> {html.escape(completed['name'])}\n"
-            admin_text += f"{E.SCISSORS} <b>Мастер:</b> {html.escape(completed['master'])}\n"
+            admin_text += f"{E.ARTIST_WOMAN} <b>Мастер:</b> {html.escape(completed['master'])}\n"
             admin_text += f"{E.BARBER} <b>Услуга:</b> {html.escape(completed['service'])}\n"
             admin_text += f"{E.CALENDAR} <b>Дата:</b> {keyboards._format_date(completed['date'])}\n"
             admin_text += f"{E.CLOCK} <b>Время:</b> {completed['time']}\n"

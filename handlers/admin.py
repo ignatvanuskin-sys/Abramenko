@@ -425,6 +425,12 @@ async def handle_admin_broadcast(message: Message, state: FSMContext):
     _broadcast_rate_limit["last_run_time"] = now
 
     users = await storage.get_all_users()
+    total_users = len(users)
+    if len(users) > config.MAX_BROADCAST_RECIPIENTS:
+        users = users[:config.MAX_BROADCAST_RECIPIENTS]
+        logger.warning(f"Broadcast: limiting to {config.MAX_BROADCAST_RECIPIENTS} of {total_users} users")
+    if len(users) > config.MAX_BROADCAST_RECIPIENTS:
+        users = users[:config.MAX_BROADCAST_RECIPIENTS]
     sent = 0
     failed = 0
     skipped = 0
@@ -595,7 +601,7 @@ async def cb_admin_export(callback: CallbackQuery):
 
     filepath = None
     try:
-        bookings = await storage.export_bookings_csv()
+        bookings = await asyncio.to_thread(lambda: storage.export_bookings_csv())
         filename = f"bookings_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
 
         scripts_dir = Path(__file__).resolve().parent.parent / "scripts"
@@ -672,7 +678,7 @@ async def cb_admin_services(callback: CallbackQuery):
     try:
         services_text = ""
         for service, price in config.SERVICES.items():
-            services_text += f"{E.SCISSORS} {service}: {price} ₸, {config.get_service_duration(service)} мин\n"
+            services_text += f"{E.ARTIST_WOMAN} {service}: {price} ₸, {config.get_service_duration(service)} мин\n"
         await edit_with_retry(
             callback.message,
             f"{E.LIST} Услуги:\n\n{services_text}" if services_text else f"{E.LIST} Услуги:\n\n{E.EMPTY} Нет услуг.",
