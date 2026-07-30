@@ -958,6 +958,12 @@ async def handle_change_phone(message: Message, state: FSMContext):
     if len(phone) > 200:
         await send_with_retry(message.bot, message.chat.id, f"{E.CROSS} Телефон слишком длинный. Максимум 200 символов.", parse_mode="HTML")
         return
+    from utils import validate_phone
+    valid, result = validate_phone(phone)
+    if not valid:
+        await send_with_retry(message.bot, message.chat.id, f"{E.CROSS} {result}", parse_mode="HTML")
+        return
+    phone = result
     old_value = config.SALON_PHONE
     config.SALON_PHONE = phone
     try:
