@@ -961,7 +961,7 @@ async def handle_change_phone(message: Message, state: FSMContext):
         logger.error(f"Failed to save phone: {e}")
     await _audit(message.from_user.id, "settings_update", "settings", "phone", old_value, phone)
     await state.clear()
-    await send_with_retry(message.bot, message.chat.id, "Телефон обновлён.", reply_markup=keyboards.admin_kb())
+    await send_with_retry(message.bot, message.chat.id, "Телефон обновлён.", reply_markup=keyboards.admin_kb(), parse_mode="HTML")
 
 
 @router.callback_query(F.data == "admin_change_hours")
@@ -1158,7 +1158,7 @@ async def handle_change_master_desc(message: Message, state: FSMContext):
         logger.error(f"Failed to save master description: {e}")
     await _audit(message.from_user.id, "settings_update", "settings", "master_description", old_value, desc)
     await state.clear()
-    await send_with_retry(message.bot, message.chat.id, "Описание мастера обновлено.", reply_markup=keyboards.admin_kb())
+    await send_with_retry(message.bot, message.chat.id, "Описание мастера обновлено.", reply_markup=keyboards.admin_kb(), parse_mode="HTML")
 
 
 @router.callback_query(F.data == "admin_change_master_exp")

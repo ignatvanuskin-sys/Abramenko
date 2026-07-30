@@ -96,6 +96,10 @@ CUSTOM_EMOJIS = {
     "📊": "5258330865674494479",  # График, статистика, анализ - PREMIUM EMOJI
     "🏷": "5258461531464539536",  # Ярлык, название - PREMIUM EMOJI
     "👩": "5260399854500191689",  # Женщина, мастер - PREMIUM EMOJI
+    "📭": "5258328383183396223",  # Пустой ящик, нет данных - PREMIUM EMOJI
+    "📖": "5258328383183396223",  # Книга, справка - PREMIUM EMOJI
+    "⚠️": "5258474669769497337",  # Предупреждение - PREMIUM EMOJI
+    "🔗": "5258461531464539536",  # Ссылка - PREMIUM EMOJI
 }
 
 
@@ -200,6 +204,9 @@ class E:
     LINK = emoji("🔗")  # Ссылка
     LABEL = emoji("🏷")  # PREMIUM - ярлык, название
     WOMAN = emoji("👩")  # PREMIUM - женщина, мастер
+    EMPTY = emoji("📭")  # PREMIUM - пусто
+    BOOK = emoji("📖")  # PREMIUM - книга, справка
+    WARNING = emoji("⚠️")  # PREMIUM - предупреждение
 
 
 def check_emoji_config() -> dict:
@@ -291,3 +298,6 @@ class P:
     CHART = "📊"
     PEOPLE = "👥"
     CAMERA = "📸"
+    EMPTY = "📭"
+    BOOK = "📖"
+    LINK = "🔗"
