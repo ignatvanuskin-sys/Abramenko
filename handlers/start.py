@@ -425,11 +425,12 @@ async def cmd_about(message: Message):
 
 @router.message(Command("contacts"))
 async def cmd_contacts(message: Message):
+    import html as _html
     """MED-02: Show contacts and social links."""
     text = messages.CONTACTS.format(
-        address=config.SALON_ADDRESS,
-        phone=config.SALON_PHONE,
-        hours=config.SALON_WORKING_HOURS,
+        address=_html.escape(config.SALON_ADDRESS),
+        phone=_html.escape(config.SALON_PHONE),
+        hours=_html.escape(config.SALON_WORKING_HOURS),
     )
     await send_with_retry(
         message.bot, message.chat.id,

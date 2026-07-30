@@ -279,15 +279,16 @@ async def schedule_reminders(bot, booking: dict):
 
 
 async def cancel_reminders(booking_id: str):
-    for job_id in [f"reminder_24h_{booking_id}", f"reminder_2h_{booking_id}", f"auto_complete_{booking_id}", f"review_{booking_id}"]:
+    job_ids = [f"reminder_24h_{booking_id}", f"reminder_2h_{booking_id}", f"auto_complete_{booking_id}", f"review_{booking_id}"]
+    for job_id in job_ids:
         try:
             scheduler.remove_job(job_id)
         except Exception:
             pass
-        try:
-            await storage.remove_scheduler_job(job_id)
-        except Exception:
-            pass
+    try:
+        await storage.batch_remove_scheduler_jobs(job_ids)
+    except Exception:
+        pass
 
 
 async def start_scheduler(bot):

@@ -219,16 +219,28 @@ async def _get_available_slots(date_str: str, master: str = None, duration_minut
     today_str = now.strftime("%Y-%m-%d")
     current_time = now.strftime("%H:%M")
 
+    locked_set = set(locked)
+    booked_map = {}
+    for b in booked_slots:
+        start = b["time"]
+        dur = b.get("duration_minutes")
+        slices = storage.slot_times_for_range(start, dur)
+        for s in slices:
+            booked_map[s] = True
+    unavailable_map = set()
+    for p in unavailable_periods:
+        dur = storage._duration_between(p["start_time"], p["end_time"])
+        slices = storage.slot_times_for_range(p["start_time"], dur)
+        for s in slices:
+            unavailable_map.add(s)
+
     for t in time_slots:
         requested_slices = storage.slot_times_for_range(t, duration)
         if not _slot_range_fits_time_slots(t, duration, time_slots):
             continue
-        elif any(slice_time in locked for slice_time in requested_slices):
+        if any(s in locked_set or s in booked_map or s in unavailable_map for s in requested_slices):
             slots[t] = "busy"
-        elif any(storage.time_ranges_overlap(t, duration, b["time"], b.get("duration_minutes")) for b in booked_slots):
-            slots[t] = "busy"
-        elif any(storage.time_ranges_overlap(t, duration, p["start_time"], storage._duration_between(p["start_time"], p["end_time"])) for p in unavailable_periods):
-            slots[t] = "busy"
+            continue
         elif date_str == today_str:
             try:
                 h, m = int(t[:2]), int(t[3:])

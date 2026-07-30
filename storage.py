@@ -63,11 +63,17 @@ def slot_times_for_range(start_time: str, duration_minutes: int | None) -> list[
     return [minutes_to_time(start + i * config.SLOT_STEP_MINUTES) for i in range(count)]
 
 
+_working_time_cache: dict[str, list[str]] = {}
+
 def working_time_slots_for_date(date_str: str) -> list[str]:
     try:
         d = datetime.strptime(date_str, "%Y-%m-%d")
     except ValueError:
         return []
+    day_key = d.strftime("%A").lower()
+    cached = _working_time_cache.get(day_key)
+    if cached is not None:
+        return cached
     day_names = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
     hours = config.WORKING_HOURS.get(day_names[d.weekday()])
     if not hours or len(hours) != 2:
@@ -79,6 +85,7 @@ def working_time_slots_for_date(date_str: str) -> list[str]:
     for h in range(start_h, end_h):
         slots.append(f"{h:02d}:00")
         slots.append(f"{h:02d}:30")
+    _working_time_cache[day_key] = slots
     return slots
 
 
@@ -487,11 +494,16 @@ async def _init_pg() -> None:
         await conn.execute("CREATE INDEX IF NOT EXISTS idx_bookings_date_master ON bookings(date, master, status)")
         await conn.execute("CREATE INDEX IF NOT EXISTS idx_bookings_date_master_key ON bookings(date, master_key, status)")
         await conn.execute("CREATE INDEX IF NOT EXISTS idx_bookings_telegram ON bookings(telegram_id, status)")
+        await conn.execute("CREATE INDEX IF NOT EXISTS idx_bookings_created_at ON bookings(created_at)")
+        await conn.execute("CREATE INDEX IF NOT EXISTS idx_bookings_status_date ON bookings(status, date)")
         await conn.execute("CREATE INDEX IF NOT EXISTS idx_waitlist_slot ON waitlist(date, time, master, status)")
+        await conn.execute("CREATE INDEX IF NOT EXISTS idx_waitlist_telegram ON waitlist(telegram_id, status)")
         await conn.execute("CREATE INDEX IF NOT EXISTS idx_loyalty_telegram ON loyalty(telegram_id)")
         await conn.execute("CREATE INDEX IF NOT EXISTS idx_reviews_booking ON reviews(booking_id)")
         await conn.execute("CREATE INDEX IF NOT EXISTS idx_referrals_referrer ON referrals(referrer_id)")
         await conn.execute("CREATE INDEX IF NOT EXISTS idx_admin_audit_created_at ON admin_audit_log(created_at)")
+        await conn.execute("CREATE INDEX IF NOT EXISTS idx_scheduler_jobs_booking ON scheduler_jobs(booking_id)")
+        await conn.execute("CREATE INDEX IF NOT EXISTS idx_portfolio_created_at ON portfolio_photos(created_at)")
         await _ensure_unavailable_periods_table(conn)
         # Migrate existing schema (no-op on fresh DB)
         await _migrate_bookings_bonus_spent(conn)
@@ -727,7 +739,7 @@ async def get_user(telegram_id: int) -> dict | None:
 
 async def get_all_users() -> list[dict]:
     async with _db.acquire() as conn:
-        return await conn.fetch("SELECT * FROM users ORDER BY created_at")
+        return await conn.fetch("SELECT * FROM users ORDER BY created_at LIMIT 10000")
 
 
 async def is_user_blocked(telegram_id: int) -> bool:
@@ -740,16 +752,18 @@ async def set_user_blocked(telegram_id: int, blocked: bool) -> None:
     async with _db.acquire() as conn:
         await conn.execute("UPDATE users SET blocked=? WHERE telegram_id=?", 1 if blocked else 0, telegram_id)
         await conn.commit()
-    # HIGH-04: When blocking a user, cancel all their active bookings to free slots
     if blocked:
         try:
             active_bookings = await get_user_bookings(telegram_id)
-            for booking in active_bookings:
-                await cancel_booking(booking["id"], telegram_id=telegram_id)
-                # Cancel reminders for this booking
+            booking_ids = [b["id"] for b in active_bookings]
+            async with _db.acquire() as conn:
+                async with conn.transaction():
+                    for bid in booking_ids:
+                        await _cancel_booking_in_transaction(conn, bid)
+            for bid in booking_ids:
                 try:
                     from scheduler import cancel_reminders
-                    await cancel_reminders(booking["id"])
+                    await cancel_reminders(bid)
                 except Exception:
                     pass
         except Exception as e:
@@ -1400,14 +1414,24 @@ async def get_waitlist_for_open_period(date: str, master: str, start_time: str, 
             "SELECT * FROM waitlist WHERE date=? AND master_key=? AND status='waiting' ORDER BY id",
             date, master_key,
         )
+        if not rows:
+            return []
+        active_slots = await conn.fetch(
+            "SELECT time, duration_minutes FROM bookings WHERE date=? AND master_key=? AND status='active'",
+            date, master_key,
+        )
+        unavailable_periods = await conn.fetch(
+            "SELECT start_time, end_time FROM unavailable_periods WHERE date=? AND master_key=?",
+            date, master_key,
+        )
         result = []
         for row in rows:
             row_duration = normalize_duration_minutes(row.get("duration_minutes") or config.get_service_duration(row.get("service", "")))
             if not time_ranges_overlap(row["time"], row_duration, start_time, freed_duration):
                 continue
-            if await _has_active_booking_overlap(conn, date, row["time"], master, row_duration, master_key):
+            if any(time_ranges_overlap(row["time"], row_duration, s["time"], s["duration_minutes"]) for s in active_slots):
                 continue
-            if await _has_unavailable_period_overlap(conn, date, row["time"], master, row_duration, master_key):
+            if any(time_ranges_overlap(row["time"], row_duration, p["start_time"], normalize_duration_minutes(p["end_time"])) for p in unavailable_periods):
                 continue
             result.append(row)
         return result
@@ -1490,15 +1514,15 @@ async def update_loyalty(telegram_id: int, name: str = "") -> int:
 
 async def add_bonus(telegram_id: int, amount: int) -> bool:
     async with _db.acquire() as conn:
-        exists = await conn.fetchval("SELECT telegram_id FROM loyalty WHERE telegram_id=?", telegram_id)
-        if not exists:
-            return False
-        await conn.execute(
-            "UPDATE loyalty SET bonuses=bonuses+?, updated_at=? WHERE telegram_id=?",
-            amount, get_now(config.TIMEZONE).isoformat(), telegram_id,
-        )
-        await conn.commit()
-        return True
+        async with conn.transaction():
+            exists = await conn.fetchval("SELECT telegram_id FROM loyalty WHERE telegram_id=?", telegram_id)
+            if not exists:
+                return False
+            await conn.execute(
+                "UPDATE loyalty SET bonuses=bonuses+?, updated_at=? WHERE telegram_id=?",
+                amount, get_now(config.TIMEZONE).isoformat(), telegram_id,
+            )
+            return True
 
 
 
@@ -1507,29 +1531,18 @@ async def add_bonus(telegram_id: int, amount: int) -> bool:
 
 async def spend_bonus(telegram_id: int, amount: int) -> bool:
 
-    """CRIT-002 FIX: Deduct bonuses from user loyalty balance.
-
-    Returns False if user has insufficient bonuses."""
+    """Deduct bonuses from user loyalty balance. Returns False if insufficient."""
 
     async with _db.acquire() as conn:
-
-        row = await conn.fetchrow("SELECT bonuses FROM loyalty WHERE telegram_id=?", telegram_id)
-
-        if not row or (row["bonuses"] or 0) < amount:
-
-            return False
-
-        await conn.execute(
-
-            "UPDATE loyalty SET bonuses=bonuses-?, updated_at=? WHERE telegram_id=?",
-
-            amount, get_now(config.TIMEZONE).isoformat(), telegram_id,
-
-        )
-
-        await conn.commit()
-
-        return True
+        async with conn.transaction():
+            row = await conn.fetchrow("SELECT bonuses FROM loyalty WHERE telegram_id=?", telegram_id)
+            if not row or (row["bonuses"] or 0) < amount:
+                return False
+            await conn.execute(
+                "UPDATE loyalty SET bonuses=bonuses-?, updated_at=? WHERE telegram_id=?",
+                amount, get_now(config.TIMEZONE).isoformat(), telegram_id,
+            )
+            return True
 
 async def get_loyalty(telegram_id: int) -> dict | None:
     async with _db.acquire() as conn:
@@ -1626,8 +1639,12 @@ async def get_user_by_ref_code(ref_code: str) -> dict | None:
 
 async def save_review(booking_id: str, telegram_id: int, rating: int, comment: str = "") -> bool:
     async with _db.acquire() as conn:
-        status_row = await conn.fetchrow("SELECT status FROM bookings WHERE id=?", booking_id)
-        if not status_row or status_row["status"] != "completed":
+        booking = await conn.fetchrow(
+            "SELECT telegram_id, status FROM bookings WHERE id=?", booking_id
+        )
+        if not booking or booking["status"] != "completed":
+            return False
+        if booking["telegram_id"] != telegram_id:
             return False
         dup = await conn.fetchval(
             "SELECT id FROM reviews WHERE booking_id=? AND telegram_id=?", booking_id, telegram_id
@@ -1662,12 +1679,21 @@ async def get_stats() -> dict:
     if _stats_cache is not None and (now - _stats_cache_time) < _STATS_CACHE_TTL:
         return _stats_cache
     async with _db.acquire() as conn:
-        total    = await conn.fetchval("SELECT COUNT(*) FROM bookings") or 0
-        active   = await conn.fetchval("SELECT COUNT(*) FROM bookings WHERE status='active'") or 0
-        cancelled= await conn.fetchval("SELECT COUNT(*) FROM bookings WHERE status='cancelled'") or 0
-        completed= await conn.fetchval("SELECT COUNT(*) FROM bookings WHERE status='completed'") or 0
-        revenue  = await conn.fetchval("SELECT COALESCE(SUM(price), 0) FROM bookings WHERE status='completed'") or 0
-        _stats_cache = {"total": total, "active": active, "cancelled": cancelled, "completed": completed, "revenue": revenue}
+        row = await conn.fetchrow(
+            "SELECT COUNT(*) as total, "
+            "COUNT(*) FILTER (WHERE status='active') as active, "
+            "COUNT(*) FILTER (WHERE status='cancelled') as cancelled, "
+            "COUNT(*) FILTER (WHERE status='completed') as completed, "
+            "COALESCE(SUM(price) FILTER (WHERE status='completed'), 0) as revenue "
+            "FROM bookings"
+        )
+        _stats_cache = {
+            "total": row["total"] or 0,
+            "active": row["active"] or 0,
+            "cancelled": row["cancelled"] or 0,
+            "completed": row["completed"] or 0,
+            "revenue": int(row["revenue"] or 0),
+        }
         _stats_cache_time = now
         return _stats_cache
 
@@ -2063,6 +2089,20 @@ async def save_scheduler_job(job_id: str, run_date: str, job_type: str, booking_
 async def remove_scheduler_job(job_id: str):
     async with _db.acquire() as conn:
         await conn.execute("DELETE FROM scheduler_jobs WHERE id=?", job_id)
+        await conn.commit()
+
+
+async def batch_remove_scheduler_jobs(job_ids: list[str]) -> None:
+    if not job_ids:
+        return
+    async with _db.acquire() as conn:
+        if _db.is_postgres():
+            placeholders = ",".join(f"${i+1}" for i in range(len(job_ids)))
+        else:
+            placeholders = ",".join("?" for _ in job_ids)
+        await conn.execute(
+            f"DELETE FROM scheduler_jobs WHERE id IN ({placeholders})", *job_ids
+        )
         await conn.commit()
 
 

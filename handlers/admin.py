@@ -110,8 +110,7 @@ async def cmd_privacy_export(message: Message):
         scripts_dir = Path(__file__).resolve().parent.parent / "scripts"
         scripts_dir.mkdir(exist_ok=True)
         filepath = scripts_dir / f"privacy_export_{telegram_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-        with open(filepath, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=2, default=str)
+        await asyncio.to_thread(_write_json_file, filepath, data)
         await message.answer_document(
             FSInputFile(str(filepath)),
             caption=f"{E.LIST} Экспорт данных клиента {telegram_id}",
@@ -429,34 +428,45 @@ async def handle_admin_broadcast(message: Message, state: FSMContext):
     if len(users) > config.MAX_BROADCAST_RECIPIENTS:
         users = users[:config.MAX_BROADCAST_RECIPIENTS]
         logger.warning(f"Broadcast: limiting to {config.MAX_BROADCAST_RECIPIENTS} of {total_users} users")
-    if len(users) > config.MAX_BROADCAST_RECIPIENTS:
-        users = users[:config.MAX_BROADCAST_RECIPIENTS]
+    sem = asyncio.Semaphore(20)
     sent = 0
     failed = 0
     skipped = 0
-    for user in users:
+
+    async def send_one(user):
         if user.get("blocked"):
-            skipped += 1
-            continue
+            return "skipped"
         try:
             await message.bot.send_message(user["telegram_id"], text)
-            sent += 1
-            await asyncio.sleep(0.05)
-            # Telegram rate limit: max ~30 msg/sec, add small pause every 20 messages
-            if sent % 20 == 0:
-                await asyncio.sleep(0.5)
+            return "sent"
         except Exception as e:
-            failed += 1
             logger.warning(f"Broadcast failed for {user.get('telegram_id')}: {e}")
             if hasattr(e, 'retry_after'):
                 await asyncio.sleep(e.retry_after)
+            return "failed"
+
+    async def bounded_send(user):
+        nonlocal sent, failed, skipped
+        async with sem:
+            result = await send_one(user)
+            if result == "sent":
+                sent += 1
+                if sent % 20 == 0:
+                    await asyncio.sleep(0.5)
+            elif result == "skipped":
+                skipped += 1
+            else:
+                failed += 1
+
+    tasks = [bounded_send(u) for u in users]
+    await asyncio.gather(*tasks)
 
     await _audit(
         message.from_user.id,
         "broadcast",
         "users",
         "all",
-        new_value=f"sent={sent}; failed={failed}; skipped={skipped}; text={text[:500]}",
+        new_value=f"sent={sent}; failed={failed}; skipped={skipped}",
     )
     await state.clear()
     await send_with_retry(

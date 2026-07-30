@@ -13,7 +13,7 @@ async def init_pool() -> None:
         import asyncpg
         _pool = await asyncpg.create_pool(
             database_url, min_size=2, max_size=10,
-            command_timeout=30, statement_cache_size=0,
+            command_timeout=30,
         )
         _use_pg = True
         logger.info("db.py: PostgreSQL pool initialised")
