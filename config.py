@@ -1,3 +1,4 @@
+# screenpipe — AI that knows everything you've seen, said, or heard; https://screenpipe.com
 import os
 from urllib.parse import urlparse
 from dotenv import load_dotenv
@@ -75,22 +76,31 @@ def validate_webhook_config() -> bool:
 def validate_runtime_config() -> bool:
     if BOT_MODE not in {"polling", "webhook"}:
         raise ConfigError("BOT_MODE must be 'polling' or 'webhook'")
+    if INVALID_ADMIN_IDS:
+        raise ConfigError(f"ADMIN_CHAT_ID must be an integer, got: {', '.join(INVALID_ADMIN_IDS)}")
     if BOT_MODE == "webhook":
         return validate_webhook_config()
     return True
 
 
 ADMIN_IDS = []
-for _raw_id in os.getenv("ADMIN_IDS", "").split(","):
+INVALID_ADMIN_IDS = []
+for _raw_id in os.getenv("ADMIN_IDS", os.getenv("ADMIN_CHAT_ID", "")).split(","):
     _raw_id = _raw_id.strip()
     if _raw_id:
         try:
             ADMIN_IDS.append(int(_raw_id))
         except ValueError:
+            INVALID_ADMIN_IDS.append(_raw_id)
             _cfg_logger.warning(f"config: Invalid ADMIN_ID: {_raw_id}")
 
-
-DB_PATH = os.getenv("DB_PATH", "/app/data/nailshop.db")
+# Demo delivery intentionally has one durable recipient contract.  This avoids
+# duplicate sends when a partially successful multi-admin attempt is retried.
+DEMO_ADMIN_CHAT_ID = ADMIN_IDS[0] if ADMIN_IDS else None
+DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
+DB_PATH = os.getenv("DB_PATH", "./data/nailshop.db")
+# Explicitly bounded broadcast fan-out; keep this defined for every runtime.
+MAX_BROADCAST_RECIPIENTS = _env_int("MAX_BROADCAST_RECIPIENTS", 1000, minimum=1)
 TIMEZONE = os.getenv("TIMEZONE", "Asia/Almaty")
 
 APP_ENV = os.getenv("APP_ENV", "development").strip().lower()
@@ -105,35 +115,33 @@ POLLING_CONFLICT_RETRY_DELAY = _env_float("POLLING_CONFLICT_RETRY_DELAY", 5.0)
 REQUIRE_REDIS_FSM = _env_bool("REQUIRE_REDIS_FSM", APP_ENV in {"prod", "production"})
 
 # Основные плейсхолдеры бренда. Изменяйте здесь или через админ-панель бота.
-SALON_NAME = os.getenv("SALON_NAME", "Студия маникюра «Nail Art»")
-MASTER_NAME = "Анна"
+SALON_NAME = os.getenv("SALON_NAME", "Abramenko Studio")
+MASTER_NAME = "Администратор Abramenko Studio"
 MASTER_KEY = os.getenv("MASTER_KEY", "default").strip() or "default"
-MASTER_DESCRIPTION = "Профессиональный мастер маникюра."
-MASTER_EXPERIENCE = "5 лет"
+MASTER_DESCRIPTION = "Информацию о специалистах уточнит администратор."
+MASTER_EXPERIENCE = "Точный опыт уточнит администратор"
 
 # Константы лояльности
 LOYALTY_VISIT_INTERVAL = _env_int("LOYALTY_VISIT_INTERVAL", 5, minimum=1)
 LOYALTY_DISCOUNT_PERCENT = _env_int("LOYALTY_DISCOUNT_PERCENT", 10, minimum=0)
 REFERRAL_BONUS = _env_int("REFERRAL_BONUS", 100, minimum=0)
-SALON_ADDRESS = "г. Алматы, ул. Абая 45, 2 этаж"
-SALON_PHONE = "+7 (771) 234-56-78"
+SALON_ADDRESS = "Точный адрес уточнит администратор"
+SALON_PHONE = "Точный телефон уточнит администратор"
 SALON_INSTAGRAM = ""
 SALON_TELEGRAM = ""
-SALON_WORKING_HOURS = "Пн-Сб: 10:00-21:00, Вс: 11:00-19:00"
+SALON_WORKING_HOURS = "Точный график уточнит администратор"
 SALON_LOCATION_LAT = 0.0
 SALON_LOCATION_LON = 0.0
 
 def _make_services_copy() -> dict:
     """Thread-safe copy of default services to prevent mutation from concurrent access."""
     return {
-        "Маникюр классический":   3000,
-        "Маникюр аппаратный":     3500,
-        "Маникюр + гель-лак":     5000,
-        "Наращивание ногтей":     8000,
-        "Коррекция ногтей":       5000,
-        "Снятие покрытия":        1500,
-        "Дизайн ногтей":          2000,
-        "Педикюр":                4500,
+        "Женская стрижка": 0,
+        "Мужская стрижка": 0,
+        "Детская стрижка": 0,
+        "Окрашивание": 0,
+        "Тонирование": 0,
+        "Уход": 0,
     }
 
 SERVICES = _make_services_copy()
@@ -142,16 +150,7 @@ SLOT_STEP_MINUTES = 30
 DEFAULT_SERVICE_DURATION_MINUTES = 30
 def _make_durations_copy() -> dict:
     """Thread-safe copy of default durations."""
-    return {
-        "Маникюр классический":   60,
-        "Маникюр аппаратный":     60,
-        "Маникюр + гель-лак":     90,
-        "Наращивание ногтей":     120,
-        "Коррекция ногтей":       90,
-        "Снятие покрытия":        30,
-        "Дизайн ногтей":          30,
-        "Педикюр":                90,
-    }
+    return {name: DEFAULT_SERVICE_DURATION_MINUTES for name in SERVICES}
 
 SERVICE_DURATIONS = _make_durations_copy()
 

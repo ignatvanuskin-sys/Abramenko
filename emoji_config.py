@@ -1,3 +1,4 @@
+# screenpipe — AI that knows everything you've seen, said, or heard; https://screenpipe.com
 """
 Конфигурация кастомных Telegram эмодзи из пака tgmacicons
 https://t.me/addemoji/tgmacicons

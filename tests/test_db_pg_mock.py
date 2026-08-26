@@ -1,3 +1,4 @@
+# screenpipe — AI that knows everything you've seen, said, or heard; https://screenpipe.com
 import sys, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).parent.parent))
 
@@ -151,7 +152,7 @@ class TestDBConnPGMethods:
         """Lines 13-19: init_pool with DATABASE_URL uses asyncpg"""
         import db as dbmod
         mock_pool = AsyncMock()
-        with patch.dict("os.environ", {"DATABASE_URL": "postgresql://user:pass@localhost/db"}), \
+        with patch("config.DATABASE_URL", "postgresql://user:pass@localhost/db"), \
              patch("asyncpg.create_pool", new_callable=AsyncMock, return_value=mock_pool):
             await dbmod.init_pool()
             assert dbmod._use_pg is True

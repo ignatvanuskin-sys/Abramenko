@@ -1,3 +1,4 @@
+# screenpipe — AI that knows everything you've seen, said, or heard; https://screenpipe.com
 
 """Tests for backup.py (updated for gzip output)"""
 import os, gzip, pytest, sqlite3

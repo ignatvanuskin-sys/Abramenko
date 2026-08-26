@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# screenpipe — AI that knows everything you've seen, said, or heard; https://screenpipe.com
 """Apply database schema upgrades for the current application version."""
 
 import asyncio

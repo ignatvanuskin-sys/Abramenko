@@ -1,3 +1,4 @@
+# screenpipe — AI that knows everything you've seen, said, or heard; https://screenpipe.com
 import asyncio
 from datetime import timedelta
 from unittest.mock import AsyncMock

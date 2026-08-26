@@ -1,3 +1,4 @@
+# screenpipe — AI that knows everything you've seen, said, or heard; https://screenpipe.com
 import uuid
 import db as _db
 from datetime import datetime, timedelta
@@ -1017,29 +1018,34 @@ async def get_user_bookings(telegram_id: int) -> list[dict]:
         )
 
 
+async def _cancel_booking_in_transaction(conn, booking_id: str) -> dict | None:
+    row = await conn.fetchrow("SELECT * FROM bookings WHERE id=? AND status='active'", booking_id)
+    if not row:
+        return None
+    await conn.execute("UPDATE bookings SET status='cancelled' WHERE id=?", booking_id)
+    await conn.execute("DELETE FROM booking_slots WHERE booking_id=?", booking_id)
+    for lock_time in slot_times_for_range(row["time"], row.get("duration_minutes")):
+        await conn.execute(
+            "DELETE FROM slot_locks WHERE date=? AND time=? AND master_key=?",
+            row["date"], lock_time, normalize_master_key(row.get("master_key")),
+        )
+    return row
+
+
 async def cancel_booking(booking_id: str, telegram_id: int = None) -> dict | None:
     async with _db.acquire() as conn:
         async with conn.transaction():
             if telegram_id:
-                row = await conn.fetchrow(
-                    "SELECT * FROM bookings WHERE id=? AND status='active' AND telegram_id=?",
+                allowed = await conn.fetchval(
+                    "SELECT 1 FROM bookings WHERE id=? AND status='active' AND telegram_id=?",
                     booking_id, telegram_id,
                 )
-            else:
-                row = await conn.fetchrow(
-                    "SELECT * FROM bookings WHERE id=? AND status='active'", booking_id
-                )
-            if not row:
-                return None
-            await conn.execute("UPDATE bookings SET status='cancelled' WHERE id=?", booking_id)
-            await conn.execute("DELETE FROM booking_slots WHERE booking_id=?", booking_id)
-            _increment_metric("bookings_cancelled")
-            _log_event("booking_cancelled", booking_id=booking_id, source="client")
-            for lock_time in slot_times_for_range(row["time"], row.get("duration_minutes")):
-                await conn.execute(
-                    "DELETE FROM slot_locks WHERE date=? AND time=? AND master_key=?",
-                    row["date"], lock_time, normalize_master_key(row.get("master_key")),
-                )
+                if not allowed:
+                    return None
+            row = await _cancel_booking_in_transaction(conn, booking_id)
+            if row:
+                _increment_metric("bookings_cancelled")
+                _log_event("booking_cancelled", booking_id=booking_id, source="client")
             return row
 
 

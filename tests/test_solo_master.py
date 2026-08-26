@@ -1,3 +1,4 @@
+# screenpipe — AI that knows everything you've seen, said, or heard; https://screenpipe.com
 import sys
 import pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).parent.parent))
@@ -15,13 +16,28 @@ class TestMainMenuKeyboard:
         kb = keyboards.main_menu_kb()
         texts = " ".join(b.text for row in kb.inline_keyboard for b in row)
         assert "Записаться" in texts
-        assert "Мои записи" in texts
+        assert "Мои записи" not in texts
         assert "Услуги и цены" in texts
         assert "Портфолио" in texts
         assert "Контакты" in texts
         assert "О мастере" in texts
         # Should be compact: 2 buttons per row, not 6 in one column
         assert all(len(row) <= 2 for row in kb.inline_keyboard)
+
+
+class TestBookingActionKeyboards:
+
+    def test_booking_success_has_no_legacy_my_bookings_button(self):
+        kb = keyboards.booking_success_kb("booking-1")
+        buttons = [b for row in kb.inline_keyboard for b in row]
+        assert all(b.callback_data != "my_bookings" for b in buttons)
+        assert all(b.text != "Мои записи" for b in buttons)
+
+    def test_booking_detail_has_no_legacy_my_bookings_button(self):
+        kb = keyboards.booking_detail_kb("booking-1")
+        buttons = [b for row in kb.inline_keyboard for b in row]
+        assert all(b.callback_data != "my_bookings" for b in buttons)
+        assert all(b.text != "Мои записи" for b in buttons)
 
 
 class TestServicesKeyboard:

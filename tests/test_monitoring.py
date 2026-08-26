@@ -1,3 +1,4 @@
+# screenpipe — AI that knows everything you've seen, said, or heard; https://screenpipe.com
 import time
 import pytest
 from unittest.mock import AsyncMock, patch, MagicMock

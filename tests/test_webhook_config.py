@@ -1,3 +1,4 @@
+# screenpipe — AI that knows everything you've seen, said, or heard; https://screenpipe.com
 import pytest
 
 
@@ -56,6 +57,16 @@ def test_polling_does_not_require_webhook_settings(monkeypatch):
     monkeypatch.setattr(config, "WEBHOOK_SECRET_TOKEN", "")
 
     assert config.validate_runtime_config() is True
+
+
+def test_malformed_admin_id_has_clear_startup_error(monkeypatch):
+    import config
+
+    monkeypatch.setattr(config, "BOT_MODE", "polling")
+    monkeypatch.setattr(config, "INVALID_ADMIN_IDS", ["not-a-chat"])
+
+    with pytest.raises(config.ConfigError, match="ADMIN_CHAT_ID must be an integer"):
+        config.validate_runtime_config()
 
 
 def test_invalid_bot_mode_has_clear_error(monkeypatch):

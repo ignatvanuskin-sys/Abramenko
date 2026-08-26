@@ -1,4 +1,5 @@
-import os, re, logging
+# screenpipe — AI that knows everything you've seen, said, or heard; https://screenpipe.com
+import re, logging
 from contextlib import asynccontextmanager
 from typing import Any, Optional
 
@@ -8,7 +9,8 @@ _use_pg: bool = False
 
 async def init_pool() -> None:
     global _pool, _use_pg
-    database_url = os.getenv("DATABASE_URL", "").strip()
+    import config
+    database_url = config.DATABASE_URL
     if database_url:
         import asyncpg
         _pool = await asyncpg.create_pool(

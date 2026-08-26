@@ -1,3 +1,4 @@
+# screenpipe — AI that knows everything you've seen, said, or heard; https://screenpipe.com
 
 """Tests for updated middleware.py GC fix (MED-03)."""
 import time, pytest, sys, pathlib

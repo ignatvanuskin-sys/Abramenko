@@ -1,3 +1,4 @@
+# screenpipe — AI that knows everything you've seen, said, or heard; https://screenpipe.com
 import asyncio
 import logging
 import os
@@ -18,6 +19,7 @@ from handlers.admin import router as admin_router
 from handlers.booking import router as booking_router
 from handlers.info import router as info_router
 from handlers.start import router as start_router
+from handlers.demo import router as demo_router
 from middleware import AdminCheckMiddleware, RateLimitMiddleware
 from monitoring import get_health_status, start_monitoring
 from scheduler import shutdown_scheduler, start_scheduler
@@ -48,7 +50,7 @@ def _create_bot() -> Bot:
 
         timeout = ClientTimeout(total=60, connect=30, sock_connect=30, sock_read=30)
         session = AiohttpSession(proxy=proxy, timeout=timeout)
-        logger.info("Using proxy: %s", proxy)
+        logger.info("Using proxy: %s", _mask_url(proxy))
         return Bot(token=BOT_TOKEN, session=session)
 
     logger.info("No proxy configured, using direct connection")
@@ -95,6 +97,7 @@ def _register_dispatcher(dp: Dispatcher, bot: Bot) -> None:
     dp.callback_query.middleware(AdminCheckMiddleware())
 
     dp.include_router(start_router)
+    dp.include_router(demo_router)
     dp.include_router(booking_router)
     dp.include_router(info_router)
     dp.include_router(admin_router)
@@ -176,11 +179,13 @@ async def _startup(bot: Bot) -> None:
     try:
         await _db_module.init_pool()
         await init_db()
+        from demo_repository import init_demo_repository
+        await init_demo_repository()
         logger.info("Database initialized")
     except Exception as e:
         logger.critical(f"Failed to initialize database: {e}", exc_info=True)
-        # Graceful degradation: bot can still show /start, but booking won't work
-        return
+        # Database is required for truthful persist-first demo delivery.
+        raise RuntimeError("Database initialization failed; refusing to start bot") from e
 
     from storage import cleanup_slot_locks_on_startup, get_all_settings
 

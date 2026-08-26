@@ -1,3 +1,4 @@
+# screenpipe — AI that knows everything you've seen, said, or heard; https://screenpipe.com
 import re
 import html
 import logging
@@ -79,6 +80,10 @@ async def cmd_admin(message: Message, state: FSMContext):
         await send_with_retry(message.bot, message.chat.id, messages.ADMIN_ONLY)
         return
     await send_with_retry(message.bot, message.chat.id, f"{E.LOCK} <b>Панель управления</b>", reply_markup=keyboards.admin_kb(), parse_mode="HTML")
+
+
+def _write_json_file(path: Path, data: dict) -> None:
+    path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 def _parse_telegram_id_arg(text: str | None) -> int | None:

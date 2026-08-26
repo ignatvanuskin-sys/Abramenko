@@ -1,3 +1,4 @@
+# screenpipe — AI that knows everything you've seen, said, or heard; https://screenpipe.com
 import re
 import html
 import logging
@@ -205,6 +206,13 @@ async def cb_main_menu(callback: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data == "my_bookings")
 async def cb_my_bookings(callback: CallbackQuery):
+    """Legacy booking view is disabled for the demo runtime."""
+    await callback.answer("Эта функция недоступна в демо", show_alert=True)
+    return
+
+
+@router.callback_query(F.data == "_legacy_my_bookings_disabled")
+async def _legacy_my_bookings_disabled(callback: CallbackQuery):
     bookings = await storage.get_user_bookings(callback.from_user.id)
     if not bookings:
         from emoji_config import P
@@ -369,6 +377,12 @@ async def cb_confirm_cancel(callback: CallbackQuery):
 
 @router.message(Command("me"))
 async def cmd_me(message: Message):
+    """Legacy profile flow is disabled for the demo runtime."""
+    await send_with_retry(message.bot, message.chat.id, "Эта команда недоступна в демо", parse_mode="HTML")
+    return
+
+
+async def _legacy_cmd_me_disabled(message: Message):
     user = await storage.get_user(message.from_user.id)
     if not user:
         await send_with_retry(message.bot, message.chat.id, messages.ERROR, parse_mode="HTML")
@@ -442,6 +456,12 @@ async def cmd_contacts(message: Message):
 
 @router.message(Command("help"))
 async def cmd_help(message: Message):
+    """Legacy help flow is disabled for the demo runtime."""
+    await send_with_retry(message.bot, message.chat.id, "Используйте кнопки главного меню.", reply_markup=keyboards.main_menu_kb(), parse_mode="HTML")
+    return
+
+
+async def _legacy_cmd_help_disabled(message: Message):
     # FIX BUG-4: все обычные Unicode-эмодзи заменены на E.* (tg-emoji Premium)
     lines = [
         f"{E.BOOK} <b>Справка по командам:</b>",

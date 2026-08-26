@@ -1,3 +1,4 @@
+# screenpipe — AI that knows everything you've seen, said, or heard; https://screenpipe.com
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from helpers import SAMPLE_BOOKING, make_callback, make_fsm, make_message

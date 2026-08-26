@@ -1,4 +1,5 @@
-﻿import sys, pathlib
+# screenpipe — AI that knows everything you've seen, said, or heard; https://screenpipe.com
+import sys, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).parent.parent))
 
 import pytest

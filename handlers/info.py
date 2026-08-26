@@ -1,3 +1,4 @@
+# screenpipe — AI that knows everything you've seen, said, or heard; https://screenpipe.com
 import html as html_lib
 import logging
 from aiogram import Router, F

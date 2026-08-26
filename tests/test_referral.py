@@ -1,3 +1,4 @@
+# screenpipe — AI that knows everything you've seen, said, or heard; https://screenpipe.com
 
 """Tests for new referral storage functions:
   - storage.ensure_user_ref_code()

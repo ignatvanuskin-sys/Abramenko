@@ -1,3 +1,4 @@
+# screenpipe — AI that knows everything you've seen, said, or heard; https://screenpipe.com
 
 """Tests for utils.py - send_with_retry, edit_with_retry"""
 import pytest

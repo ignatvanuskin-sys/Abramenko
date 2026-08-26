@@ -49,9 +49,13 @@ htmlcov/
 coverage.xml
 
 # Dev artifacts
+.pi-subagents/
 storage_sqlite_backup.py
 patch_fixes.py
 .kimchi/
 
 # Release artifacts
 *.zip
+
+# Test artifacts
+PYTEST_OUTPUT.txt

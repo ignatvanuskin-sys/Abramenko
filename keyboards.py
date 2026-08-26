@@ -1,3 +1,4 @@
+# screenpipe — AI that knows everything you've seen, said, or heard; https://screenpipe.com
 import messages
 import config
 from datetime import datetime
@@ -21,24 +22,23 @@ def _safe_cb(prefix: str, value: str, max_bytes: int = 62) -> str:
 
 def main_menu_kb() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(text="Записаться", callback_data="book"),
-            InlineKeyboardButton(text="Мои записи", callback_data="my_bookings"),
-        ],
-        [
-            InlineKeyboardButton(text="Услуги и цены", callback_data="prices"),
-            InlineKeyboardButton(text="Портфолио", callback_data="portfolio"),
-        ],
-        [
-            InlineKeyboardButton(text="Контакты", callback_data="contacts"),
-            InlineKeyboardButton(text="О мастере", callback_data="about_master"),
-        ],
+        [InlineKeyboardButton(text="Записаться", callback_data="demo_book")],
+        [InlineKeyboardButton(text="Услуги и цены", callback_data="demo_faq:services"),
+         InlineKeyboardButton(text="Цены", callback_data="demo_faq:prices")],
+        [InlineKeyboardButton(text="Адреса", callback_data="demo_faq:addresses"),
+         InlineKeyboardButton(text="График", callback_data="demo_faq:hours")],
+        [InlineKeyboardButton(text="Портфолио", callback_data="portfolio"),
+         InlineKeyboardButton(text="Контакты", callback_data="contacts")],
+        [InlineKeyboardButton(text="О мастере", callback_data="about_master")],
+        [InlineKeyboardButton(text="Стать моделью", callback_data="demo_lead:model")],
+        [InlineKeyboardButton(text="Вакансии", callback_data="demo_lead:vacancy")],
+        [InlineKeyboardButton(text="Курс «Колорист с нуля»", callback_data="demo_lead:course")],
     ])
 
 
 async def services_kb(back: str = "main_menu") -> InlineKeyboardMarkup:
     """Service selection — only service name (no price, doesn't fit)."""
-    service_list = list(SERVICES.keys())
+    service_list = list(config.SERVICES.keys())
     buttons = []
     for i in range(0, len(service_list), 2):
         row = []
@@ -103,7 +103,6 @@ def booking_success_kb(booking_id: str = None) -> InlineKeyboardMarkup:
     if booking_id:
         buttons.append([
             InlineKeyboardButton(text="Отменить", callback_data=f"ask_cancel:{booking_id}"),
-            InlineKeyboardButton(text="Мои записи", callback_data="my_bookings"),
         ])
     buttons.append([InlineKeyboardButton(text="Назад в меню", callback_data="main_menu")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
@@ -125,7 +124,6 @@ def booking_detail_kb(booking_id: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [
             InlineKeyboardButton(text="Отменить", callback_data=f"ask_cancel:{booking_id}"),
-            InlineKeyboardButton(text="Мои записи", callback_data="my_bookings"),
         ],
         [InlineKeyboardButton(text="Назад в меню", callback_data="main_menu")],
     ])

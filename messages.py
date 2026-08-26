@@ -1,3 +1,4 @@
+# screenpipe — AI that knows everything you've seen, said, or heard; https://screenpipe.com
 import html as html_module
 from emoji_config import E
 
@@ -6,8 +7,8 @@ def welcome_text(name: str) -> str:
     """Генерирует приветственное сообщение с экранированием имени"""
     return (
         f"{E.BARBER} <b>Добро пожаловать в {html_module.escape(name)}!</b>\n\n"
-        f"{E.ARTIST_WOMAN} Профессиональный маникюр, педикюр и nail-дизайн.\n\n"
-        "Выберите действие:"
+        "Помогу собрать заявку на услуги студии, обучение или сотрудничество.\n\n"
+        "Точное время подтверждает администратор. Выберите действие:"
     )
 
 
@@ -275,8 +276,8 @@ ADMIN_SERVICE_ADDED = "Услуга {name} добавлена ({price} ₸)."
 ADMIN_SERVICE_REMOVED = "Услуга {name} удалена."
 ADMIN_SERVICE_UPDATED = "Услуга {name} обновлена ({price} ₸)."
 ADMIN_SERVICE_NOT_FOUND = "Услуга {name} не найдена."
-ADMIN_ADD_SERVICE_PROMPT = "Добавление услуги\n\nФормат: Название, цена, длительность_мин\nПример: Маникюр классический, 3000, 60"
-ADMIN_EDIT_SERVICE_PROMPT = "Редактирование услуги\n\nФормат: Название, цена, длительность_мин\nПример: Маникюр классический, 3500, 60"
+ADMIN_ADD_SERVICE_PROMPT = "Добавление услуги\n\nФормат: Название, цена, длительность_мин\nПример: Женская стрижка, 0, 60"
+ADMIN_EDIT_SERVICE_PROMPT = "Редактирование услуги\n\nФормат: Название, цена, длительность_мин\nПример: Женская стрижка, 0, 60"
 ADMIN_REMOVE_SERVICE_PROMPT = "Выберите услугу для удаления:"
 ADMIN_SETTINGS = "Настройки\n\nАдрес: {address}\nТелефон: {phone}\nЧасы работы: {hours}\nМастер: {master}"
 ADMIN_CHANGE_ADDRESS_PROMPT = "Введите новый адрес:"
@@ -322,7 +323,7 @@ ADMIN_SOCIAL_LINKS_INTRO = (
 ADMIN_SOCIAL_ADD_PROMPT = (
     "Добавление ссылки\n\n"
     "Формат: Название, URL\n"
-    "Пример: Instagram, https://instagram.com/nail_master"
+    "Пример: Instagram, https://instagram.com/portfolio"
 )
 ADMIN_SOCIAL_LINK_DELETED = "Ссылка удалена."
 
@@ -354,8 +355,8 @@ INVITE_FRIEND = (
 
 
 INVITE_FRIEND_SHARE = (
-    f"{E.BARBER} Я делаю маникюр у мастера <b>{{name}}</b>!\n\n"
-    f"{E.ARTIST_WOMAN} Профессиональный nail-мастер, удобная онлайн-запись.\n"
-    "Записывайся и получи первую скидку!\n\n"
+    f"{E.BARBER} Приглашаю в <b>{{name}}</b>!\n\n"
+    f"{E.ARTIST_WOMAN} Услуги для волос и удобная заявка через Telegram.\n"
+    "Точное время подтвердит администратор.\n\n"
     "{link}"
 )
