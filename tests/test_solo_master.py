@@ -21,13 +21,13 @@ class TestMainMenuKeyboard:
         assert "Цены" in texts
         assert "Адреса" in texts
         assert "График" in texts
-        assert "Стать моделью" in texts
-        assert "Курс «Колорист с нуля»" in texts
         # Unneeded/placeholder entries must not appear in the client menu
         assert "Портфолио" not in texts
         assert "Контакты" not in texts
         assert "О студии" not in texts
         assert "Вакансии" not in texts
+        assert "Стать моделью" not in texts
+        assert "Курс «Колорист с нуля»" not in texts
         # Should be compact: 2 buttons per row, not 6 in one column
         assert all(len(row) <= 2 for row in kb.inline_keyboard)
 

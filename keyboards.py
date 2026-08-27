@@ -27,8 +27,6 @@ def main_menu_kb() -> InlineKeyboardMarkup:
          icon_button("Цены", "money", callback_data="demo_faq:prices")],
         [icon_button("Адреса", "location", callback_data="demo_faq:addresses"),
          icon_button("График", "clock", callback_data="demo_faq:hours")],
-        [icon_button("Стать моделью", "people", callback_data="demo_lead:model")],
-        [icon_button("Курс «Колорист с нуля»", "write", callback_data="demo_lead:course")],
     ])
 
 
