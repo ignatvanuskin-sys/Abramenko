@@ -3,7 +3,7 @@
 
 import asyncio
 from datetime import datetime, timedelta
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -19,20 +19,25 @@ def live_state(data):
     return state
 
 
+def contact_message(phone="+77001234567", user_id=111):
+    message = make_message(user_id=user_id)
+    message.contact = MagicMock(phone_number=phone, user_id=user_id)
+    return message
+
+
 @pytest.mark.asyncio
-async def test_branch_master_service_date_time_contacts_confirm(monkeypatch):
+async def test_branch_service_date_time_contact_confirm(monkeypatch):
     data = {}; state = live_state(data)
     await flow.start(make_callback("demo_book"), state)
     await flow.choose_branch(make_callback("db_branch:0"), state)
-    await flow.choose_master(make_callback("db_master:0"), state)
     with patch.object(flow.booking_engine, "_get_next_dates", AsyncMock(return_value=["2099-01-02"])):
         await flow.choose_service(make_callback("db_service:0"), state)
     with patch.object(flow.booking_engine, "_get_available_slots", AsyncMock(return_value={"12:00": "free"})):
         await flow.choose_date(make_callback("date:2099-01-02"), state)
         with patch.object(flow.storage, "create_slot_lock", AsyncMock(return_value=True)):
             await flow.choose_time(make_callback("time:12:00", user_id=42), state)
-    await flow.name(make_message("Анна"), state); await flow.phone(make_message("+77001234567"), state)
-    assert data["branch"] == "Филиал 1" and data["master"] == "Любой мастер"
+    await flow.name(make_message("Анна"), state); await flow.phone(contact_message(user_id=42), state)
+    assert data["branch"] == flow.BRANCHES[0] and data["master"] == "Любой мастер"
     assert data["date"] == "2099-01-02" and data["time"] == "12:00"
     with patch.object(flow.storage, "save_booking", AsyncMock(return_value="book-1")), patch.object(flow, "finish", AsyncMock()) as finish:
         await flow.confirm(make_callback("db_confirm:0", user_id=42), state)
@@ -41,8 +46,8 @@ async def test_branch_master_service_date_time_contacts_confirm(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_coloring_branch_and_photo_buttons():
-    data = {"service": "Окрашивание"}; state = live_state(data)
-    await flow.phone(make_message("+77001234567"), state)
+    data = {"service": "AIRTOUCH"}; state = live_state(data)
+    await flow.phone(contact_message(), state)
     await flow.hair_length(make_message("до плеч"), state)
     await flow.result(make_message("блонд"), state)
     await flow.last_coloring(make_message("год назад"), state)
@@ -52,17 +57,17 @@ async def test_coloring_branch_and_photo_buttons():
 
 @pytest.mark.asyncio
 async def test_slot_race_and_branch_resource_isolation():
-    data = {"branch": "Филиал 1", "date": "2099-01-02", "duration_minutes": 30}; state = live_state(data)
+    data = {"branch": flow.BRANCHES[0], "date": "2099-01-02", "duration_minutes": 30}; state = live_state(data)
     with patch.object(flow.booking_engine, "_get_available_slots", AsyncMock(return_value={"12:00": "free"})), patch.object(flow.storage, "create_slot_lock", AsyncMock(return_value=False)):
         callback = make_callback("time:12:00")
         await flow.choose_time(callback, state)
         assert callback.answer.await_args.kwargs["show_alert"] is True
-    assert flow.resource({"branch": "Филиал 1"}) != flow.resource({"branch": "Филиал 2"})
+    assert flow.resource({"branch": flow.BRANCHES[0]}) != flow.resource({"branch": flow.BRANCHES[1]})
 
 
 @pytest.mark.asyncio
 async def test_cancel_and_back_release_lock():
-    data = {"branch": "Филиал 1", "date": "2099-01-02", "time": "12:00", "lock_token": "x"}; state = live_state(data)
+    data = {"branch": flow.BRANCHES[0], "date": "2099-01-02", "time": "12:00", "lock_token": "x"}; state = live_state(data)
     with patch.object(flow.storage, "release_slot_lock", AsyncMock()) as release:
         await flow.cancel(make_callback("demo_booking_cancel"), state)
     release.assert_awaited_once()
@@ -70,7 +75,7 @@ async def test_cancel_and_back_release_lock():
 
 @pytest.mark.asyncio
 async def test_empty_schedule_renders_no_slots_button():
-    data = {"branch": "Филиал 1", "duration_minutes": 30, "eligible_dates": ["2099-01-02"]}; state = live_state(data)
+    data = {"branch": flow.BRANCHES[0], "duration_minutes": 30, "eligible_dates": ["2099-01-02"]}; state = live_state(data)
     callback = make_callback("date:2099-01-02")
     with patch.object(flow.booking_engine, "_get_available_slots", AsyncMock(return_value={})):
         await flow.choose_date(callback, state)
@@ -82,7 +87,7 @@ async def test_empty_schedule_renders_no_slots_button():
 
 @pytest.mark.asyncio
 async def test_booking_save_failure_has_real_recovery_button_and_does_not_duplicate():
-    data = {"branch": "Филиал 1", "date": "2099-01-02", "time": "12:00", "name": "Анна", "service": "Уход", "lock_token": "token"}; state = live_state(data)
+    data = {"branch": flow.BRANCHES[0], "date": "2099-01-02", "time": "12:00", "name": "Анна", "service": "Женская стрижка", "lock_token": "token"}; state = live_state(data)
     first = make_callback("db_confirm:0", user_id=42)
     with patch.object(flow.storage, "save_booking", AsyncMock(return_value="book-1")) as save, patch.object(flow, "finish", AsyncMock(side_effect=RuntimeError("repository offline"))):
         await flow.confirm(first, state)
@@ -97,7 +102,7 @@ async def test_booking_save_failure_has_real_recovery_button_and_does_not_duplic
 
 @pytest.mark.asyncio
 async def test_repeated_confirm_conflict_does_not_finish():
-    data = {"branch": "Филиал 1", "date": "2099-01-02", "time": "12:00", "name": "Анна", "service": "Уход"}; state = live_state(data)
+    data = {"branch": flow.BRANCHES[0], "date": "2099-01-02", "time": "12:00", "name": "Анна", "service": "Женская стрижка"}; state = live_state(data)
     callback = make_callback("db_confirm:0")
     with patch.object(flow.storage, "save_booking", AsyncMock(return_value=None)), patch.object(flow, "finish", AsyncMock()) as finish:
         await flow.confirm(callback, state)

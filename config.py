@@ -134,23 +134,41 @@ SALON_LOCATION_LAT = 0.0
 SALON_LOCATION_LON = 0.0
 
 def _make_services_copy() -> dict:
-    """Thread-safe copy of default services to prevent mutation from concurrent access."""
+    """Thread-safe copy of default services to prevent mutation from concurrent access.
+    Цены — диапазоны прайса клиента; для простоты записи берём «от …₸»."""
     return {
-        "Женская стрижка": 0,
-        "Мужская стрижка": 0,
-        "Детская стрижка": 0,
-        "Окрашивание": 0,
-        "Тонирование": 0,
-        "Уход": 0,
+        "Женская стрижка": 4000,
+        "Мужская стрижка": 2500,
+        "AIRTOUCH": 25000,
+        "Балаяж": 25000,
+        "DIM-OUT": 25000,
+        "Мелирование": 25000,
+        "Total Blond": 25000,
+        "Окрашивание в один тон": 8000,
+        "Выход из тёмного/чёрного цвета": 35000,
+        "Коррекция Total Blond": 15000,
+        "Яркое/креативное окрашивание": 18000,
+        "Коррекция сложных окрашиваний": 30000,
+        "Контуринг и тонирование": 18000,
     }
 
 SERVICES = _make_services_copy()
 
 SLOT_STEP_MINUTES = 30
-DEFAULT_SERVICE_DURATION_MINUTES = 30
+DEFAULT_SERVICE_DURATION_MINUTES = 60
+_COLORING_DURATION_MINUTES = 180
 def _make_durations_copy() -> dict:
     """Thread-safe copy of default durations."""
-    return {name: DEFAULT_SERVICE_DURATION_MINUTES for name in SERVICES}
+    durations = {name: DEFAULT_SERVICE_DURATION_MINUTES for name in SERVICES}
+    for name in SERVICES:
+        if name in {
+            "AIRTOUCH", "Балаяж", "DIM-OUT", "Мелирование", "Total Blond",
+            "Окрашивание в один тон", "Выход из тёмного/чёрного цвета",
+            "Коррекция Total Blond", "Яркое/креативное окрашивание",
+            "Коррекция сложных окрашиваний", "Контуринг и тонирование",
+        }:
+            durations[name] = _COLORING_DURATION_MINUTES
+    return durations
 
 SERVICE_DURATIONS = _make_durations_copy()
 

@@ -16,9 +16,16 @@ def _future_date(days: int = 10) -> str:
 
 
 def test_catalog_and_faq_are_confirmed_only():
-    assert SERVICES == ["Женская стрижка", "Мужская стрижка", "Детская стрижка", "Окрашивание", "Тонирование", "Уход"]
-    assert BRANCHES == ["Филиал 1", "Филиал 2"]
-    assert all("администратор" in FAQ[key].lower() for key in ("prices", "addresses", "hours"))
+    assert SERVICES == [
+        "Женская стрижка", "Мужская стрижка",
+        "AIRTOUCH", "Балаяж", "DIM-OUT", "Мелирование", "Total Blond",
+        "Окрашивание в один тон", "Выход из тёмного/чёрного цвета",
+        "Коррекция Total Blond", "Яркое/креативное окрашивание",
+        "Коррекция сложных окрашиваний", "Контуринг и тонирование",
+    ]
+    assert BRANCHES == ["AIRTOUCH — ул. Букетова, 61", "Мадам — ул. Жамбыла, 127"]
+    assert all("администратор" in FAQ[key].lower() for key in ("prices", "hours"))
+    assert "Букетова" in FAQ["addresses"] and "Жамбыла" in FAQ["addresses"]
 
 
 def test_validation_and_html_contract():
@@ -36,7 +43,7 @@ def test_validation_and_html_contract():
 
 @pytest.mark.asyncio
 async def test_repository_persists_full_payload_and_is_idempotent(db):
-    payload = {"service": "Окрашивание", "branch": "Филиал 1", "date": "15.09", "time": "12:00", "name": "Анна", "phone": "+77001234567", "master": None, "hair_length": "до плеч"}
+    payload = {"service": "AIRTOUCH", "branch": "AIRTOUCH — ул. Букетова, 61", "date": "15.09", "time": "12:00", "name": "Анна", "phone": "+77001234567", "master": None, "hair_length": "до плеч"}
     first, second = await asyncio.gather(
         demo_repository.create_or_get_request("booking", 42, payload, "same-key"),
         demo_repository.create_or_get_request("booking", 42, payload, "same-key"),
@@ -49,11 +56,11 @@ async def test_repository_persists_full_payload_and_is_idempotent(db):
 
 @pytest.mark.asyncio
 async def test_booking_order_phone_to_master_then_coloring_questions():
-    state = make_fsm(data={"service": "Окрашивание"})
+    state = make_fsm(data={"service": "AIRTOUCH"})
     message = make_message("+7 700 123 45 67")
     await demo.phone(message, state)
     state.set_state.assert_awaited_once_with(demo.Booking.master)
-    state = make_fsm(data={"service": "Окрашивание"})
+    state = make_fsm(data={"service": "AIRTOUCH"})
     message = make_message("нет")
     await demo.master(message, state)
     state.set_state.assert_awaited_once_with(demo.Booking.hair_length)
@@ -63,7 +70,7 @@ async def test_booking_order_phone_to_master_then_coloring_questions():
 async def test_finish_empty_admin_persists_and_does_not_claim_sent(monkeypatch, db):
     monkeypatch.setattr(demo.config, "DEMO_ADMIN_CHAT_ID", None)
     message = make_message(user_id=7)
-    state = make_fsm(data={"name": "Анна", "phone": "+77001234567", "branch": "Филиал 1"})
+    state = make_fsm(data={"name": "Анна", "phone": "+77001234567", "branch": "AIRTOUCH — ул. Букетова, 61"})
     await demo.finish(message, state, "Стать моделью", "model")
     request_id = (await demo_repository.create_or_get_request(
         "model", 7, demo.normalized_payload(await state.get_data()),
@@ -80,7 +87,7 @@ async def test_finish_empty_admin_persists_and_does_not_claim_sent(monkeypatch, 
 async def test_finish_send_failure_records_error(monkeypatch, db):
     monkeypatch.setattr(demo.config, "DEMO_ADMIN_CHAT_ID", 99)
     message = make_message(user_id=7); message.bot.send_message.side_effect = RuntimeError("offline")
-    data = {"name": "Анна", "phone": "+77001234567", "branch": "Филиал 1"}
+    data = {"name": "Анна", "phone": "+77001234567", "branch": "AIRTOUCH — ул. Букетова, 61"}
     state = make_fsm(data=data)
     await demo.finish(message, state, "Вакансия", "vacancy")
     payload = demo.normalized_payload(data)

@@ -60,3 +60,6 @@ patch_fixes.py
 # Test artifacts
 PYTEST_OUTPUT.txt
 PYTEST_EXIT_CODE.txt
+
+# Cowork session artifacts
+2026-08-27/

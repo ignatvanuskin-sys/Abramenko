@@ -13,8 +13,8 @@ from tz_utils import get_now
 
 DATE = "2099-01-05"
 TIME = "12:00"
-BRANCH_1 = "Филиал 1|Любой мастер"
-BRANCH_2 = "Филиал 2|Любой мастер"
+BRANCH_1 = "AIRTOUCH — ул. Букетова, 61|Любой мастер"
+BRANCH_2 = "Мадам — ул. Жамбыла, 127|Любой мастер"
 
 
 def booking(branch, user_id):
@@ -26,7 +26,7 @@ def booking(branch, user_id):
         "username": "",
         "master": branch,
         "master_key": branch,
-        "service": "Уход",
+        "service": "Женская стрижка",
         "price": 1000,
         "duration_minutes": 30,
     }

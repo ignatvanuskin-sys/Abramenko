@@ -248,8 +248,8 @@ async def confirm(c: CallbackQuery, state: FSMContext):
 
 
 LEADS = {
-    "model": ("Стать моделью", [("name", "Ваше имя?"), ("phone", "Телефон +7XXXXXXXXXX?"), ("service", "Какая услуга интересует?"), ("portfolio", "Ссылка на портфолио или «нет»?"), ("branch", "Филиал 1 или Филиал 2?")]),
-    "vacancy": ("Вакансия", [("name", "Ваше имя?"), ("experience", "Расскажите об опыте."), ("portfolio", "Ссылка на портфолио или «нет»?"), ("phone", "Телефон +7XXXXXXXXXX?"), ("branch", "Филиал 1 или Филиал 2?")]),
+    "model": ("Стать моделью", [("name", "Ваше имя?"), ("phone", "Телефон +7XXXXXXXXXX?"), ("service", "Какая услуга интересует?"), ("portfolio", "Ссылка на портфолио или «нет»?"), ("branch", "Какой филиал? AIRTOUCH (Букетова, 61) или Мадам (Жамбыла, 127)?")]),
+    "vacancy": ("Вакансия", [("name", "Ваше имя?"), ("experience", "Расскажите об опыте."), ("portfolio", "Ссылка на портфолио или «нет»?"), ("phone", "Телефон +7XXXXXXXXXX?"), ("branch", "Какой филиал? AIRTOUCH (Букетова, 61) или Мадам (Жамбыла, 127)?")]),
     "course": ("Курс «Колорист с нуля»", [("level", "Уровень: с нуля, есть база или повышение?"), ("goal", "Ваша цель обучения?"), ("city", "Ваш город?"), ("phone", "Телефон +7XXXXXXXXXX?"), ("format", "Формат: очно, онлайн или не выбрано?")]),
 }
 
@@ -272,7 +272,7 @@ async def lead_field(m: Message, state: FSMContext):
         value = normalize_phone(value)
         if not value: return await m.answer("Нужен номер в формате +7XXXXXXXXXX.")
     if field == "branch" and value.lower() not in {x.lower() for x in BRANCHES}:
-        return await m.answer("Выберите «Филиал 1» или «Филиал 2».")
+        return await m.answer("Выберите филиал из списка: AIRTOUCH (Букетова, 61) или Мадам (Жамбыла, 127).")
     if field == "branch": value = next(x for x in BRANCHES if x.lower() == value.lower())
     if field == "name" and len(value) > 80: return await m.answer("Имя должно быть не длиннее 80 символов.")
     if field in {"experience", "portfolio", "level", "goal", "city", "format", "service"} and len(value) > MAX_TEXT_FIELD:

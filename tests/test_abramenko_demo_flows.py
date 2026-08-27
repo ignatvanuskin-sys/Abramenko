@@ -47,7 +47,7 @@ async def test_regular_booking_happy_path_confirm_persist_and_admin_card(monkeyp
 
 @pytest.mark.asyncio
 async def test_coloring_collects_all_extra_questions():
-    data = {"service": "Окрашивание"}
+    data = {"service": "AIRTOUCH"}
     state = make_fsm(data=data)
 
     async def update_data(**values):
@@ -89,7 +89,7 @@ async def test_model_full_request_confirm_persist_and_card(monkeypatch, db):
     state.update_data.side_effect = update_data
     state.get_data.side_effect = lambda: dict(data)
 
-    for value in ("Анна", "+7 700 123 45 67", "Окрашивание", "https://example.test/p", "Филиал 2"):
+    for value in ("Анна", "+7 700 123 45 67", "AIRTOUCH", "https://example.test/p", "Мадам — ул. Жамбыла, 127"):
         await demo.lead_field(make_message(value), state)
     assert data["lead_index"] == len(fields)
     state.set_state.assert_awaited_with(demo.Lead.confirm)
@@ -98,7 +98,7 @@ async def test_model_full_request_confirm_persist_and_card(monkeypatch, db):
     await demo.lead_confirm(callback, state)
     callback.message.bot.send_message.assert_awaited_once()
     card = callback.message.bot.send_message.await_args.args[1]
-    assert "Тип: Стать моделью" in card and "Филиал 2" in card
+    assert "Тип: Стать моделью" in card and "Мадам — ул. Жамбыла, 127" in card
     rows = await _requests()
     assert len(rows) == 1 and rows[0]["request_type"] == "model"
     assert rows[0]["payload"]["portfolio"] == "https://example.test/p"

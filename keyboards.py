@@ -2,8 +2,8 @@
 import messages
 import config
 from datetime import datetime
-from aiogram.types import InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton
-from emoji_config import icon_button
+from aiogram.types import InlineKeyboardMarkup, ReplyKeyboardMarkup
+from emoji_config import icon_button, reply_icon_button
 from config import SERVICES
 # Button text: plain text ONLY — no emojis (neither Unicode nor premium tg-emoji).
 # Telegram inline button text is plain text, HTML tags are not rendered.
@@ -148,7 +148,7 @@ def confirm_cancel_kb(booking_id: str) -> InlineKeyboardMarkup:
 
 def phone_kb() -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(keyboard=[
-        [KeyboardButton(text="Поделиться номером", request_contact=True)],
+        [reply_icon_button(text="Поделиться номером", icon="profile", request_contact=True)],
     ], resize_keyboard=True, one_time_keyboard=True)
 
 
