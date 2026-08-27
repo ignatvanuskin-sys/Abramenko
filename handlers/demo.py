@@ -269,6 +269,8 @@ async def lead_field(m: Message, state: FSMContext):
         return await m.answer("Выберите «Филиал 1» или «Филиал 2».")
     if field == "branch": value = next(x for x in BRANCHES if x.lower() == value.lower())
     if field == "name" and len(value) > 80: return await m.answer("Имя должно быть не длиннее 80 символов.")
+    if field in {"experience", "portfolio", "level", "goal", "city", "format", "service"} and len(value) > MAX_TEXT_FIELD:
+        return await m.answer(f"Пожалуйста, короче (максимум {MAX_TEXT_FIELD} символов).")
     await state.update_data(**{field: value}, lead_index=index + 1)
     if index + 1 < len(fields): return await m.answer(fields[index + 1][1])
     updated = await state.get_data(); omitted = {"lead_key", "lead_title", "lead_fields", "lead_index", "name", "phone", "branch", "date", "time"}

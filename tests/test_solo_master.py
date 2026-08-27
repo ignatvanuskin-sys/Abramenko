@@ -20,7 +20,7 @@ class TestMainMenuKeyboard:
         assert "Услуги и цены" in texts
         assert "Портфолио" in texts
         assert "Контакты" in texts
-        assert "О мастере" in texts
+        assert "О студии" in texts
         # Should be compact: 2 buttons per row, not 6 in one column
         assert all(len(row) <= 2 for row in kb.inline_keyboard)
 
