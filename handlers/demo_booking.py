@@ -16,7 +16,7 @@ import keyboards
 import storage
 from handlers import booking as booking_engine
 from handlers.demo import MAX_TEXT_FIELD, finish, normalize_phone
-from studio_data import BRANCHES, COLORING_SERVICES, SERVICES
+from studio_data import BRANCHES, COLORING_SERVICES, MASTERS, SERVICES, masters_for_branch
 from tz_utils import get_now
 
 router = Router()
@@ -24,7 +24,7 @@ MASTER = "Любой мастер"
 
 
 class DemoBooking(StatesGroup):
-    branch = State(); service = State(); date = State(); time = State(); name = State(); phone = State()
+    branch = State(); master = State(); service = State(); date = State(); time = State(); name = State(); phone = State()
     hair_length = State(); result = State(); last_coloring = State(); photo = State(); confirm = State()
 
 
@@ -70,15 +70,26 @@ async def release(user_id, state):
 @router.callback_query(F.data == "demo_book")
 async def start(c: CallbackQuery, state: FSMContext):
     await release(c.from_user.id, state); await state.clear(); await state.set_state(DemoBooking.branch)
-    await c.message.edit_text("<b>Шаг 1 из 6 — выберите филиал</b>", reply_markup=_kb(BRANCHES, "db_branch"), parse_mode="HTML"); await c.answer()
+    await c.message.edit_text("<b>Шаг 1 из 7 — выберите филиал</b>", reply_markup=_kb(BRANCHES, "db_branch"), parse_mode="HTML"); await c.answer()
 
 
 @router.callback_query(F.data.startswith("db_branch:"), DemoBooking.branch)
 async def choose_branch(c, state):
     try: value = BRANCHES[int(c.data.rsplit(":", 1)[1])]
     except (ValueError, IndexError): return await c.answer("Филиал не найден", show_alert=True)
-    await state.update_data(branch=value, master=MASTER); await state.set_state(DemoBooking.service)
-    await c.message.edit_text("<b>Шаг 2 из 6 — выберите услугу</b>", reply_markup=_kb(SERVICES, "db_service", "demo_book"), parse_mode="HTML"); await c.answer()
+    await state.update_data(branch=value); await state.set_state(DemoBooking.master)
+    ms = masters_for_branch(value) or [MASTER]
+    await c.message.edit_text("<b>Шаг 2 из 7 — выберите мастера</b>", reply_markup=_kb(ms, "db_master", "demo_book"), parse_mode="HTML"); await c.answer()
+
+
+@router.callback_query(F.data.startswith("db_master:"), DemoBooking.master)
+async def choose_master(c, state):
+    data = await state.get_data()
+    ms = masters_for_branch(data.get("branch", "")) or [MASTER]
+    try: value = ms[int(c.data.rsplit(":", 1)[1])]
+    except (ValueError, IndexError): return await c.answer("Мастер не найден", show_alert=True)
+    await state.update_data(master=value); await state.set_state(DemoBooking.service)
+    await c.message.edit_text("<b>Шаг 3 из 7 — выберите услугу</b>", reply_markup=_kb(SERVICES, "db_service", "db_back:master"), parse_mode="HTML"); await c.answer()
 
 
 @router.callback_query(F.data.startswith("db_service:"), DemoBooking.service)
@@ -88,7 +99,7 @@ async def choose_service(c, state):
     await state.update_data(service=value, duration_minutes=config.get_service_duration(value)); await state.set_state(DemoBooking.date)
     dates = await booking_engine._get_next_dates()
     await state.update_data(eligible_dates=list(dates))
-    await c.message.edit_text("<b>Шаг 3 из 6 — выберите дату</b>", reply_markup=keyboards.dates_kb(dates, back="db_back:service", prefix="db_date:"), parse_mode="HTML"); await c.answer()
+    await c.message.edit_text("<b>Шаг 4 из 7 — выберите дату</b>", reply_markup=keyboards.dates_kb(dates, back="db_back:service", prefix="db_date:"), parse_mode="HTML"); await c.answer()
 
 
 @router.callback_query(F.data.startswith("db_date:"), DemoBooking.date)
@@ -101,7 +112,7 @@ async def choose_date(c, state):
     if value not in data.get("eligible_dates", []): return await c.answer("Дата больше недоступна. Выберите её заново.", show_alert=True)
     slots = await booking_engine._get_available_slots(value, resource(data), data.get("duration_minutes"))
     await state.update_data(date=value); await state.set_state(DemoBooking.time)
-    await c.message.edit_text("<b>Шаг 4 из 6 — выберите время</b>", reply_markup=demo_time_slots_kb(slots), parse_mode="HTML"); await c.answer()
+    await c.message.edit_text("<b>Шаг 5 из 7 — выберите время</b>", reply_markup=demo_time_slots_kb(slots), parse_mode="HTML"); await c.answer()
 
 
 @router.callback_query(F.data.startswith("db_time:"), DemoBooking.time)
@@ -116,14 +127,14 @@ async def choose_time(c, state):
     rows = []
     if c.from_user.first_name: rows.append([icon_button(text=f"Использовать «{c.from_user.first_name[:50]}»", callback_data="db_tg_name")])
     rows += [[icon_button(text="Назад", callback_data="db_back:time")], [icon_button(text="Отмена", callback_data="demo_booking_cancel")]]
-    await c.message.edit_text("<b>Шаг 5 из 6 — как вас зовут?</b>", reply_markup=InlineKeyboardMarkup(inline_keyboard=rows), parse_mode="HTML"); await c.answer()
+    await c.message.edit_text("<b>Шаг 6 из 7 — как вас зовут?</b>", reply_markup=InlineKeyboardMarkup(inline_keyboard=rows), parse_mode="HTML"); await c.answer()
 
 
 async def accept_name(value, target, state):
     value = value.strip()
     if not value or len(value) > 80: return False
     await state.update_data(name=value); await state.set_state(DemoBooking.phone)
-    await target.answer("<b>Шаг 6 из 6 — поделитесь номером телефона</b>", reply_markup=keyboards.phone_kb(), parse_mode="HTML")
+    await target.answer("<b>Шаг 7 из 7 — поделитесь номером телефона</b>", reply_markup=keyboards.phone_kb(), parse_mode="HTML")
     return True
 
 
@@ -247,18 +258,21 @@ async def confirm(c, state):
     await c.answer()
 
 
-@router.callback_query(F.data.startswith("db_back:"), DemoBooking.branch, DemoBooking.service, DemoBooking.date, DemoBooking.time, DemoBooking.name, DemoBooking.phone, DemoBooking.hair_length, DemoBooking.result, DemoBooking.last_coloring, DemoBooking.photo, DemoBooking.confirm)
+@router.callback_query(F.data.startswith("db_back:"), DemoBooking.branch, DemoBooking.master, DemoBooking.service, DemoBooking.date, DemoBooking.time, DemoBooking.name, DemoBooking.phone, DemoBooking.hair_length, DemoBooking.result, DemoBooking.last_coloring, DemoBooking.photo, DemoBooking.confirm)
 async def back(c, state):
     target = c.data.rsplit(":", 1)[1]; data = await state.get_data()
-    if target not in {"service", "date", "time", "details"}: return await c.answer("Сессия устарела. Начните запись заново.", show_alert=True)
+    if target not in {"master", "service", "date", "time", "details"}: return await c.answer("Сессия устарела. Начните запись заново.", show_alert=True)
     if target != "details": await release(c.from_user.id, state)
-    if target == "service": await state.set_state(DemoBooking.service); await c.message.edit_text("<b>Шаг 2 из 6 — выберите услугу</b>", reply_markup=_kb(SERVICES, "db_service", "demo_book"), parse_mode="HTML")
+    if target == "master":
+        ms = masters_for_branch(data.get("branch", "")) or [MASTER]
+        await state.set_state(DemoBooking.master); await c.message.edit_text("<b>Шаг 2 из 7 — выберите мастера</b>", reply_markup=_kb(ms, "db_master", "demo_book"), parse_mode="HTML")
+    elif target == "service": await state.set_state(DemoBooking.service); await c.message.edit_text("<b>Шаг 3 из 7 — выберите услугу</b>", reply_markup=_kb(SERVICES, "db_service", "db_back:master"), parse_mode="HTML")
     elif target == "date":
-        dates = await booking_engine._get_next_dates(); await state.update_data(eligible_dates=list(dates)); await state.set_state(DemoBooking.date); await c.message.edit_text("<b>Шаг 3 из 6 — выберите дату</b>", reply_markup=keyboards.dates_kb(dates, back="db_back:service", prefix="db_date:"), parse_mode="HTML")
+        dates = await booking_engine._get_next_dates(); await state.update_data(eligible_dates=list(dates)); await state.set_state(DemoBooking.date); await c.message.edit_text("<b>Шаг 4 из 7 — выберите дату</b>", reply_markup=keyboards.dates_kb(dates, back="db_back:service", prefix="db_date:"), parse_mode="HTML")
     elif target == "details":
         await state.set_state(DemoBooking.phone)
         await c.message.answer("Поделитесь номером ещё раз. Остальные данные сохранены.", reply_markup=keyboards.phone_kb())
-    else: await state.set_state(DemoBooking.time); await c.message.edit_text("<b>Шаг 4 из 6 — выберите время</b>", reply_markup=demo_time_slots_kb(await booking_engine._get_available_slots(data["date"], resource(data), data.get("duration_minutes"))), parse_mode="HTML")
+    else: await state.set_state(DemoBooking.time); await c.message.edit_text("<b>Шаг 5 из 7 — выберите время</b>", reply_markup=demo_time_slots_kb(await booking_engine._get_available_slots(data["date"], resource(data), data.get("duration_minutes"))), parse_mode="HTML")
     await c.answer()
 
 

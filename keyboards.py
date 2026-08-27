@@ -23,10 +23,10 @@ def _safe_cb(prefix: str, value: str, max_bytes: int = 62) -> str:
 def main_menu_kb() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [icon_button("Записаться", "calendar", callback_data="demo_book")],
-        [icon_button("Услуги и цены", "money", callback_data="demo_faq:services"),
-         icon_button("Цены", "money", callback_data="demo_faq:prices")],
-        [icon_button("Адреса", "location", callback_data="demo_faq:addresses"),
-         icon_button("График", "clock", callback_data="demo_faq:hours")],
+        [icon_button("Мои записи", "file", callback_data="my_bookings")],
+        [icon_button("Услуги и цены", "money", callback_data="demo_faq:prices")],
+        [icon_button("Наши мастера", "people", callback_data="demo_faq:masters")],
+        [icon_button("О салоне", "info", callback_data="demo_faq:info")],
     ])
 
 
@@ -265,19 +265,22 @@ def admin_kb() -> InlineKeyboardMarkup:
             icon_button(text="Услуги", callback_data="admin_services"),
         ],
         [
+            icon_button(text="Мастера", callback_data="admin_masters"),
             icon_button(text="Портфолио", callback_data="admin_portfolio"),
+        ],
+        [
             icon_button(text="Соц.сети", callback_data="admin_social_links"),
-        ],
-        [
             icon_button(text="Настройки", callback_data="admin_settings"),
-            icon_button(text="Экспорт CSV", callback_data="admin_export"),
         ],
         [
+            icon_button(text="Экспорт CSV", callback_data="admin_export"),
             icon_button(text="Статистика", callback_data="admin_stats"),
+        ],
+        [
             icon_button(text="Рассылка", callback_data="admin_broadcast"),
+            icon_button(text="Блокировки", callback_data="admin_unavailable"),
         ],
         [icon_button(text="Аудит", callback_data="admin_audit")],
-        [icon_button(text="Блокировки", callback_data="admin_unavailable")],
         [icon_button(text="Назад в меню", callback_data="main_menu")],
     ])
 
@@ -318,6 +321,23 @@ def admin_unavailable_kb(periods: list[dict]) -> InlineKeyboardMarkup:
         rows.append([icon_button(text=label[:40], callback_data=f"admin_delete_unavailable:{period['id']}")])
     rows.append([icon_button(text="Назад", callback_data="admin")])
     return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def admin_masters_kb() -> InlineKeyboardMarkup:
+    """Список мастеров для админки (имя -> детали/редактирование)."""
+    rows = []
+    for i, (name, desc, branch_idx) in enumerate(config.MASTERS if hasattr(config, "MASTERS") else []):
+        rows.append([icon_button(text=name, callback_data=f"admin_master_detail:{i}")])
+    rows.append([icon_button(text="Назад", callback_data="admin")])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def admin_master_detail_kb(index: int) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [icon_button(text="✏️ Имя", callback_data=f"admin_master_name:{index}"),
+         icon_button(text="✏️ Описание", callback_data=f"admin_master_desc:{index}")],
+        [icon_button(text="Назад", callback_data="admin_masters")],
+    ])
 
 
 def admin_settings_kb() -> InlineKeyboardMarkup:

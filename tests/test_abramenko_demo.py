@@ -24,8 +24,9 @@ def test_catalog_and_faq_are_confirmed_only():
         "Коррекция сложных окрашиваний", "Контуринг и тонирование",
     ]
     assert BRANCHES == ["AIRTOUCH — ул. Букетова, 61", "Мадам — ул. Жамбыла, 127"]
-    assert all("администратор" in FAQ[key].lower() for key in ("prices", "hours"))
-    assert "Букетова" in FAQ["addresses"] and "Жамбыла" in FAQ["addresses"]
+    assert all("администратор" in FAQ[key].lower() for key in ("prices",))
+    assert "Букетова" in FAQ["info"] and "Жамбыла" in FAQ["info"]
+    assert "Мастер" in FAQ["masters"] or "мастер" in FAQ["masters"]
 
 
 def test_validation_and_html_contract():

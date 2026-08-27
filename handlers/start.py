@@ -206,9 +206,24 @@ async def cb_main_menu(callback: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data == "my_bookings")
 async def cb_my_bookings(callback: CallbackQuery):
-    """Legacy booking view is disabled for the demo runtime."""
-    await callback.answer("Эта функция недоступна в демо", show_alert=True)
-    return
+    """Показать активные записи пользователя."""
+    bookings = await storage.get_user_bookings(callback.from_user.id)
+    if not bookings:
+        from emoji_config import P
+        await callback.answer(f"{P.EMPTY} У вас нет активных записей", show_alert=True)
+        return
+    text = f"{E.LIST} <b>Ваши активные записи:</b>\n\n"
+    for i, b in enumerate(bookings, 1):
+        date_str = keyboards._format_date(b['date'])
+        text += f"<b>{i}. {date_str} в {b['time']}</b>\n"
+        text += f"   {E.MASTER} Мастер: {html.escape(str(b['master']))}\n"
+        text += f"   {E.BARBER} Услуга: {html.escape(str(b['service']))}\n"
+        text += f"   {E.CLOCK} Длительность: {_booking_duration_text(b)}\n"
+        text += f"   {E.MONEY} Цена: {b['price']:,} ₸\n".replace(",", " ")
+        text += f"   {E.ID} ID: <code>{html.escape(str(b['id']))}</code>\n\n"
+    text += f"{E.POINT_DOWN} Выберите запись для подробностей:"
+    await callback.message.edit_text(text, reply_markup=keyboards.bookings_list_kb(bookings), parse_mode="HTML")
+    await callback.answer()
 
 
 @router.callback_query(F.data == "_legacy_my_bookings_disabled")

@@ -30,6 +30,7 @@ async def test_branch_service_date_time_contact_confirm(monkeypatch):
     data = {}; state = live_state(data)
     await flow.start(make_callback("demo_book"), state)
     await flow.choose_branch(make_callback("db_branch:0"), state)
+    await flow.choose_master(make_callback("db_master:0"), state)
     with patch.object(flow.booking_engine, "_get_next_dates", AsyncMock(return_value=["2099-01-02"])):
         await flow.choose_service(make_callback("db_service:0"), state)
     with patch.object(flow.booking_engine, "_get_available_slots", AsyncMock(return_value={"12:00": "free"})):
@@ -37,7 +38,7 @@ async def test_branch_service_date_time_contact_confirm(monkeypatch):
         with patch.object(flow.storage, "create_slot_lock", AsyncMock(return_value=True)):
             await flow.choose_time(make_callback("db_time:12:00", user_id=42), state)
     await flow.name(make_message("Анна"), state); await flow.phone(contact_message(user_id=42), state)
-    assert data["branch"] == flow.BRANCHES[0] and data["master"] == "Любой мастер"
+    assert data["branch"] == flow.BRANCHES[0] and data["master"] == flow.masters_for_branch(flow.BRANCHES[0])[0]
     assert data["date"] == "2099-01-02" and data["time"] == "12:00"
     with patch.object(flow.storage, "save_booking", AsyncMock(return_value="book-1")), patch.object(flow, "finish", AsyncMock()) as finish:
         await flow.confirm(make_callback("db_confirm:0", user_id=42), state)

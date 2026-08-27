@@ -121,6 +121,14 @@ MASTER_KEY = os.getenv("MASTER_KEY", "default").strip() or "default"
 MASTER_DESCRIPTION = "Информацию о специалистах уточнит администратор."
 MASTER_EXPERIENCE = "Точный опыт уточнит администратор"
 
+# Список мастеров: (имя, описание, индекс филиала из studio_data.BRANCHES).
+MASTERS = [
+    ("Алиса", "Колорист AIRTOUCH, балаяж, Total Blond", 0),
+    ("Диана", "Стрижки, окрашивание в один тон, тонирование", 0),
+    ("Елена", "Мелирование, креативное окрашивание, контуринг", 1),
+    ("Ольга", "Стрижки, укладки, окрашивание", 1),
+]
+
 # Константы лояльности
 LOYALTY_VISIT_INTERVAL = _env_int("LOYALTY_VISIT_INTERVAL", 5, minimum=1)
 LOYALTY_DISCOUNT_PERCENT = _env_int("LOYALTY_DISCOUNT_PERCENT", 10, minimum=0)

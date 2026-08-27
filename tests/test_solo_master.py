@@ -16,12 +16,14 @@ class TestMainMenuKeyboard:
         kb = keyboards.main_menu_kb()
         texts = " ".join(b.text for row in kb.inline_keyboard for b in row)
         assert "Записаться" in texts
-        assert "Мои записи" not in texts
+        assert "Мои записи" in texts
         assert "Услуги и цены" in texts
-        assert "Цены" in texts
-        assert "Адреса" in texts
-        assert "График" in texts
+        assert "Наши мастера" in texts
+        assert "О салоне" in texts
         # Unneeded/placeholder entries must not appear in the client menu
+        assert "Цены" not in texts.split("Услуги и цены", 1)[0]
+        assert "Адреса" not in texts
+        assert "График" not in texts
         assert "Портфолио" not in texts
         assert "Контакты" not in texts
         assert "О студии" not in texts

@@ -1123,6 +1123,45 @@ async def handle_change_salon_name(message: Message, state: FSMContext):
     await send_with_retry(message.bot, message.chat.id, f"Название студии обновлено: {html.escape(name)}", reply_markup=keyboards.admin_kb(), parse_mode="HTML")
 
 
+@router.callback_query(F.data == "admin_masters")
+async def cb_admin_masters(callback: CallbackQuery):
+    text = "<b>Мастера</b>\n\n" + "\n".join(
+        f"• {html.escape(name)} — {html.escape(desc)}" for name, desc, _ in config.MASTERS
+    )
+    await edit_with_retry(callback.message, text, reply_markup=keyboards.admin_masters_kb(), parse_mode="HTML")
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("admin_master_detail:"))
+async def cb_admin_master_detail(callback: CallbackQuery):
+    try: idx = int(callback.data.rsplit(":", 1)[1])
+    except ValueError: return await callback.answer("Некорректный индекс", show_alert=True)
+    if not (0 <= idx < len(config.MASTERS)):
+        return await callback.answer("Мастер не найден", show_alert=True)
+    name, desc, branch_idx = config.MASTERS[idx]
+    text = f"<b>{html.escape(name)}</b>\n\n{html.escape(desc)}"
+    await edit_with_retry(callback.message, text, reply_markup=keyboards.admin_master_detail_kb(idx), parse_mode="HTML")
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("admin_master_name:"))
+async def cb_admin_master_name(callback: CallbackQuery, state: FSMContext):
+    idx = callback.data.rsplit(":", 1)[1]
+    await state.update_data(edit_master_index=int(idx), edit_master_field="name")
+    await state.set_state(AdminStates.change_master_name)
+    await edit_with_retry(callback.message, "Введите новое имя мастера:")
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("admin_master_desc:"))
+async def cb_admin_master_desc(callback: CallbackQuery, state: FSMContext):
+    idx = callback.data.rsplit(":", 1)[1]
+    await state.update_data(edit_master_index=int(idx), edit_master_field="desc")
+    await state.set_state(AdminStates.change_master_desc)
+    await edit_with_retry(callback.message, "Введите новое описание мастера:")
+    await callback.answer()
+
+
 @router.callback_query(F.data == "admin_change_master_name")
 async def cb_admin_change_master_name(callback: CallbackQuery, state: FSMContext):
     if not _is_admin(callback.from_user.id):
@@ -1143,6 +1182,16 @@ async def handle_change_master_name(message: Message, state: FSMContext):
     name = message.text.strip()
     if len(name) > 50:
         await send_with_retry(message.bot, message.chat.id, f"{E.CROSS} Имя слишком длинное (макс 50 символов).", parse_mode="HTML")
+        return
+    data = await state.get_data()
+    idx = data.get("edit_master_index")
+    if idx is not None and 0 <= idx < len(config.MASTERS):
+        old_value = config.MASTERS[idx][0]
+        mname, mdesc, mbranch = config.MASTERS[idx]
+        config.MASTERS[idx] = (name, mdesc, mbranch)
+        await _audit(message.from_user.id, "settings_update", "master", str(idx), old_value, name)
+        await state.clear()
+        await send_with_retry(message.bot, message.chat.id, f"Мастер обновлён: {html.escape(name)}", reply_markup=keyboards.admin_masters_kb(), parse_mode="HTML")
         return
     old_value = config.MASTER_NAME
     config.MASTER_NAME = name
@@ -1176,6 +1225,16 @@ async def handle_change_master_desc(message: Message, state: FSMContext):
     desc = message.text.strip()
     if len(desc) > 500:
         await send_with_retry(message.bot, message.chat.id, f"{E.CROSS} Описание слишком длинное (макс 500 символов).", parse_mode="HTML")
+        return
+    data = await state.get_data()
+    idx = data.get("edit_master_index")
+    if idx is not None and 0 <= idx < len(config.MASTERS):
+        old_value = config.MASTERS[idx][1]
+        mname, mdesc, mbranch = config.MASTERS[idx]
+        config.MASTERS[idx] = (mname, desc, mbranch)
+        await _audit(message.from_user.id, "settings_update", "master", str(idx), old_value, desc)
+        await state.clear()
+        await send_with_retry(message.bot, message.chat.id, f"Описание мастера обновлено: {html.escape(mname)}", reply_markup=keyboards.admin_masters_kb(), parse_mode="HTML")
         return
     old_value = config.MASTER_DESCRIPTION
     config.MASTER_DESCRIPTION = desc
