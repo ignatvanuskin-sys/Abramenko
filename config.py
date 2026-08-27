@@ -134,10 +134,10 @@ LOYALTY_VISIT_INTERVAL = _env_int("LOYALTY_VISIT_INTERVAL", 5, minimum=1)
 LOYALTY_DISCOUNT_PERCENT = _env_int("LOYALTY_DISCOUNT_PERCENT", 10, minimum=0)
 REFERRAL_BONUS = _env_int("REFERRAL_BONUS", 100, minimum=0)
 SALON_ADDRESS = "Точный адрес уточнит администратор"
-SALON_PHONE = "Точный телефон уточнит администратор"
+SALON_PHONE = "+7 707 486 5437"
 SALON_INSTAGRAM = ""
 SALON_TELEGRAM = ""
-SALON_WORKING_HOURS = "Точный график уточнит администратор"
+SALON_WORKING_HOURS = "Ежедневно: 10:00–20:00"
 SALON_LOCATION_LAT = 0.0
 SALON_LOCATION_LON = 0.0
 
@@ -189,16 +189,16 @@ def get_service_duration(service_name: str) -> int:
     return duration if duration > 0 else DEFAULT_SERVICE_DURATION_MINUTES
 
 WORKING_HOURS = {
-    "monday":    (10, 21), "tuesday":   (10, 21),
-    "wednesday": (10, 21), "thursday":  (10, 21),
-    "friday":    (10, 21), "saturday":  (10, 21),
-    "sunday":    (11, 19),
+    "monday":    (10, 20), "tuesday":   (10, 20),
+    "wednesday": (10, 20), "thursday":  (10, 20),
+    "friday":    (10, 20), "saturday":  (10, 20),
+    "sunday":    (10, 20),
 }
 
 TIME_SLOTS = [
     "10:00","10:30","11:00","11:30","12:00","12:30","13:00","13:30",
     "14:00","14:30","15:00","15:30","16:00","16:30","17:00","17:30",
-    "18:00","18:30","19:00","19:30","20:00","20:30",
+    "18:00","18:30","19:00","19:30",
 ]
 
 MAX_BOOKING_ATTEMPTS = _env_int("MAX_BOOKING_ATTEMPTS", 10, minimum=1)

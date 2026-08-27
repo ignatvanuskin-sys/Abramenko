@@ -41,13 +41,13 @@ class TestGenerateTimeSlots:
         from handlers.booking import _generate_time_slots
         slots = _generate_time_slots("2026-12-07")  # Monday
         assert "10:00" in slots
-        assert "20:30" in slots
+        assert "19:30" in slots
 
     def test_no_closing_time_slot(self):
         """Slot at exactly closing time must not be generated."""
         from handlers.booking import _generate_time_slots
         slots = _generate_time_slots("2026-12-07")
-        assert "21:00" not in slots
+        assert "20:00" not in slots
 
     def test_sunday_has_shorter_hours(self):
         from handlers.booking import _generate_time_slots
