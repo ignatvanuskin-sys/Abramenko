@@ -253,7 +253,8 @@ ADMIN_STATS = (
 )
 
 ADMIN_EXPORT = f"{E.CHECK} Экспорт завершён. Файл: <code>{{filename}}</code>"
-ADMIN_ONLY = "🔒 Команда доступна только администратору."
+ADMIN_ONLY = "Команда доступна только администратору."
+ADMIN_ONLY_HTML = f"{E.LOCK} {ADMIN_ONLY}"
 
 
 def get_about_text() -> str:

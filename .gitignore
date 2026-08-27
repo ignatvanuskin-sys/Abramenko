@@ -59,3 +59,4 @@ patch_fixes.py
 
 # Test artifacts
 PYTEST_OUTPUT.txt
+PYTEST_EXIT_CODE.txt

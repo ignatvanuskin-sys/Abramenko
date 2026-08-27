@@ -20,6 +20,7 @@ from handlers.booking import router as booking_router
 from handlers.info import router as info_router
 from handlers.start import router as start_router
 from handlers.demo import router as demo_router
+from handlers.demo_booking import router as demo_booking_router
 from middleware import AdminCheckMiddleware, RateLimitMiddleware
 from monitoring import get_health_status, start_monitoring
 from scheduler import shutdown_scheduler, start_scheduler
@@ -97,6 +98,7 @@ def _register_dispatcher(dp: Dispatcher, bot: Bot) -> None:
     dp.callback_query.middleware(AdminCheckMiddleware())
 
     dp.include_router(start_router)
+    dp.include_router(demo_booking_router)
     dp.include_router(demo_router)
     dp.include_router(booking_router)
     dp.include_router(info_router)

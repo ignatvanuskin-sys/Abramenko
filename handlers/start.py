@@ -14,7 +14,7 @@ import config
 import storage
 import scheduler
 from utils import send_with_retry, edit_with_retry, notify_admins
-from emoji_config import E, P
+from emoji_config import E, P, icon_button
 
 logger = logging.getLogger(__name__)
 
@@ -573,13 +573,13 @@ async def cb_invite_friend(callback: CallbackQuery):
             link=ref_link,
         )
 
-        from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+        from aiogram.types import InlineKeyboardMarkup
         kb = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(
+            [icon_button(
                 text="Поделиться ссылкой",
                 switch_inline_query=share_text[:512],
             )],
-            [InlineKeyboardButton(text="Назад", callback_data="main_menu")],
+            [icon_button(text="Назад", callback_data="main_menu")],
         ])
 
         await edit_with_retry(

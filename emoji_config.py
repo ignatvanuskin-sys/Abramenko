@@ -1,304 +1,122 @@
 # screenpipe — AI that knows everything you've seen, said, or heard; https://screenpipe.com
-"""
-Конфигурация кастомных Telegram эмодзи из пака tgmacicons
-https://t.me/addemoji/tgmacicons
+"""Central Telegram Premium/custom emoji configuration."""
 
-ВАЖНО: Замените все "ЗАМЕНИТЕ_НА_REAL_ID" на настоящие ID эмодзи!
+from aiogram.types import InlineKeyboardButton, KeyboardButton
 
-Как получить ID:
-1. Откройте Telegram Desktop
-2. Добавьте пак: https://t.me/addemoji/tgmacicons
-3. Отправьте эмодзи боту @userinfobot
-4. Скопируйте ID из ответа бота
-"""
+# Authoritative IDs supplied for this bot.  Keep IDs in this module only.
+EMOJI_IDS = {
+    "settings": "5870982283724328568", "profile": "5870994129244131212",
+    "people": "5870772616305839506", "person_check": "5891207662678317861",
+    "person_cross": "5893192487324880883", "file": "5870528606328852614",
+    "smile": "5870764288364252592", "chart_growth": "5870930636742595124",
+    "chart_stats": "5870921681735781843", "home": "5873147866364514353",
+    "lock": "6037249452824072506", "unlock": "6037496202990194718",
+    "megaphone": "6039422865189638057", "check": "5870633910337015697",
+    "cross": "5870657884844462243", "pencil": "5870676941614354370",
+    "trash": "5870875489362513438", "down": "5893057118545646106",
+    "attachment": "6039451237743595514", "link": "5769289093221454192",
+    "info": "6028435952299413210", "phone": "6030400221232501136", "bot": "6030400221232501136",
+    "eye": "6037397706505195857", "hidden": "6037243349675544634",
+    "send": "5963103826075456248", "download": "6039802767931871481",
+    "bell": "6039486778597970865", "gift": "6032644646587338669",
+    "clock": "5983150113483134607", "celebration": "6041731551845159060",
+    "font_link": "5870801517140775623", "write": "5870753782874246579",
+    "media": "6035128606563241721", "location": "6042011682497106307",
+    "wallet": "5769126056262898415", "box": "5884479287171485878",
+    "cryptobot": "5260752406890711732", "calendar": "5890937706803894250",
+    "tag": "5886285355279193209", "elapsed": "5775896410780079073",
+    "apps": "5778672437122045013", "brush": "6050679691004612757",
+    "add_text": "5771851822897566479", "format": "5778479949572738874",
+    "money": "5904462880941545555", "send_money": "5890848474563352982",
+    "receive_money": "5879814368572478751", "code": "5940433880585605708",
+    "loading": "5345906554510012647",
+}
 
-import os
-
-
-def _env_bool(name: str, default: bool = False) -> bool:
-    value = os.getenv(name)
-    if value is None:
-        return default
-    return value.strip().lower() in {"1", "true", "yes", "on"}
-
-
-# Plain Unicode is the safe default. Enable Premium tg-emoji only explicitly.
-USE_PREMIUM_EMOJI = _env_bool("USE_PREMIUM_EMOJI", False)
-
-# Маппинг Unicode эмодзи -> ID кастомного эмодзи
-CUSTOM_EMOJIS = {
-    # Основные - интерфейс
-    "🏘": "5257963315258204021",  # Дома (главное меню) - PREMIUM EMOJI
-    "🍑": "5258330865674494479",  # Анализ (стикер) - PREMIUM EMOJI
-    "🤙": "5258337316715373336",  # Телефон жест - PREMIUM EMOJI
-    "👤": "5260399854500191689",  # Пользователь, клиент - PREMIUM EMOJI
-    "🗓": "5258105663359294787",  # Календарь альтернативный (дата) - PREMIUM EMOJI
-    "📅": "5258105663359294787",  # Календарь (дата) - PREMIUM EMOJI
-    
-    # Статусы
-    "✅": "5260726538302660868",  # Успех, подтверждение - PREMIUM EMOJI (первый вариант)
-    "❌": "5260342697075416641",  # Ошибка, отмена - PREMIUM EMOJI
-    "✓": "5260726538302660868",   # Галочка - PREMIUM EMOJI
-    "✗": "5260342697075416641",   # Крестик - PREMIUM EMOJI
-    
-    # Информация и действия
-    "📌": "5258461531464539536",  # Пин, закрепить - PREMIUM EMOJI
-    "📍": "5258509201306557640",  # Локация, адрес - PREMIUM EMOJI
-    "➕": "5258108352008823107",  # Добавить, плюс - PREMIUM EMOJI
-    "🔄": "5258420634785947640",  # Обновить, повторить - PREMIUM EMOJI
-    "👥": "5258513401784573443",  # Группа людей, клиенты - PREMIUM EMOJI
-    "📸": "5258205968025525531",  # Камера, фото - PREMIUM EMOJI
-    "⭐": "5258165702707125574",  # Звезда, рейтинг (первый вариант) - PREMIUM EMOJI
-    "🔎": "5429571366384842791",  # Поиск, лупа - PREMIUM EMOJI
-    "👁": "5253959125838090076",  # Глаз, просмотр - PREMIUM EMOJI
-    "🔒": "5258476306152038031",  # Замок, безопасность - PREMIUM EMOJI
-    "📂": "5257969839313526622",  # Папка, файлы - PREMIUM EMOJI
-    "👨‍🎨": "5258450450448915742",  # Художник, кисточка, стиль (мужчина) - PREMIUM EMOJI
-    "🎨": "5258450450448915742",  # Палитра, стиль - PREMIUM EMOJI
-    "🔢": "5226513232549664618",  # Цифры, номер - PREMIUM EMOJI
-    "🆔": "5226513232549664618",  # ID записи, номер - PREMIUM EMOJI
-    
-    # Время и расписание
-    "🕘": "5199457120428249992",  # Часы 9:00 - PREMIUM EMOJI
-    "⏲": "5258258882022612173",  # Таймер - PREMIUM EMOJI
-    "🕐": "5258258882022612173",  # Часы (время)
-    
-    # Деньги и работа
-    "💰": "5258204546391351475",  # Деньги, цена - PREMIUM EMOJI
-    "📝": "5257965174979042426",  # Список, записи - PREMIUM EMOJI
-    "📋": "5257965174979042426",  # Список, записи
-    "❗": "5258474669769497337",  # Предупреждение/важно - PREMIUM EMOJI  # Предупреждение
-    "💡": "5258216851472654189",  # Идея, совет - PREMIUM EMOJI
-    "📖": "5258328383183396223",  # Книга, справка - PREMIUM EMOJI
-    "💬": "5260535596941582167",  # Комментарий, отзыв - PREMIUM EMOJI
-    
-    # Дополнительные действия
-    "✈️": "5258073068852485953",  # Отправить/отправлено - PREMIUM EMOJI
-    "✍️": "5258331647358540449",  # Написать/редактировать - PREMIUM EMOJI  # Пустой ящик (нет записей)
-    "👏": "5258501105293205250",  # Аплодисменты/молодец - PREMIUM EMOJI  # Праздник, поздравление
-    "⚡": "5258152182150077732",  # Быстро/энергия - PREMIUM EMOJI
-    "🎯": "5258152182150077732",  # Цель, специализация
-    "🤚": "5260249440450520061",  # Стоп/рука - PREMIUM EMOJI
-    "👩‍🎨": "5258215635996908355",  # Художник женщина/мастер - PREMIUM EMOJI
-    "💈": "5258215635996908355",  # Салон красоты / студия маникюра
-    
-    # Информация
-    "ℹ️": "5258503720928288433",  # Информация - PREMIUM EMOJI
-    "⬇️": "5258336354642697821",  # Стрелка вниз/указатель - PREMIUM EMOJI
-    "👇": "5258336354642697821",  # Палец вниз, указатель
-    
-    # Дополнительные
-    "📞": "5258337316715373336",  # Телефон - PREMIUM EMOJI
-    "☎️": "5258337316715373336",  # Телефон альт - PREMIUM EMOJI
-    "📱": "5258337316715373336",  # Мобильный телефон - PREMIUM EMOJI
-    "🏠": "5257963315258204021",  # Дом (главное меню) - PREMIUM EMOJI
-    "👨‍💼": "5260399854500191689",  # Мастер - PREMIUM EMOJI
-    "👨‍🎨": "5258450450448915742",  # Ножницы (стрижка)
-    "📊": "5258330865674494479",  # График, статистика, анализ - PREMIUM EMOJI
-    "🏷": "5258461531464539536",  # Ярлык, название - PREMIUM EMOJI
-    "👩": "5260399854500191689",  # Женщина, мастер - PREMIUM EMOJI
-    "📭": "5258328383183396223",  # Пустой ящик, нет данных - PREMIUM EMOJI
-    "📖": "5258328383183396223",  # Книга, справка - PREMIUM EMOJI
-    "⚠️": "5258474669769497337",  # Предупреждение - PREMIUM EMOJI
-    "🔗": "5258461531464539536",  # Ссылка - PREMIUM EMOJI
+# Unicode aliases are retained only as an ergonomic input API.
+ALIASES = {
+    "⚙️": "settings", "👤": "profile", "👥": "people", "✅": "check",
+    "❌": "cross", "📄": "file", "📈": "chart_growth", "📊": "chart_stats",
+    "🏠": "home", "🔒": "lock", "🔓": "unlock", "📣": "megaphone",
+    "✏️": "pencil", "🗑️": "trash", "⬇️": "down", "📎": "attachment",
+    "🔗": "link", "ℹ️": "info", "🤖": "bot", "👁️": "eye", "🙈": "hidden",
+    "📤": "send", "📥": "download", "🔔": "bell", "🎁": "gift", "🕒": "clock",
+    "🎉": "celebration", "🔤": "font_link", "✍️": "write", "🖼️": "media",
+    "📍": "location", "💳": "wallet", "📦": "box", "📅": "calendar",
+    "🏷️": "tag", "⏱️": "elapsed", "📱": "apps", "🎨": "brush", "➕": "add_text",
+    "💰": "money", "💸": "send_money", "💵": "receive_money", "</>": "code",
+    "⏳": "loading", "🙂": "smile",
 }
 
 
-def emoji(unicode_emoji: str, fallback: bool = True) -> str:
-    """
-    Конвертирует Unicode эмодзи в кастомный Telegram эмодзи
-    
-    Args:
-        unicode_emoji: Обычный Unicode эмодзи (например: "👋")
-        fallback: Если True и ID не найден, вернуть обычный эмодзи
-        
-    Returns:
-        HTML код кастомного эмодзи: <tg-emoji emoji-id="123">👋</tg-emoji>
-        Или обычный эмодзи если ID не найден и fallback=True
-        
-    Examples:
-        >>> emoji("👋")
-        '<tg-emoji emoji-id="5368324170671202286">👋</tg-emoji>'
-        
-        >>> emoji("🔥")  # Если нет в маппинге
-        '🔥'
-    """
-    if not USE_PREMIUM_EMOJI:
-        return unicode_emoji if fallback else ""
-
-    emoji_id = CUSTOM_EMOJIS.get(unicode_emoji)
-    
-    if emoji_id and emoji_id != "ЗАМЕНИТЕ_НА_REAL_ID":
-        return f'<tg-emoji emoji-id="{emoji_id}">{unicode_emoji}</tg-emoji>'
-    else:
-        # Fallback на обычный эмодзи
-        return unicode_emoji if fallback else ""
+def tg(name: str, fallback: str = "") -> str:
+    """Return Telegram HTML custom emoji; unknown names fail closed."""
+    emoji_id = EMOJI_IDS[name]
+    return f'<tg-emoji emoji-id="{emoji_id}">{fallback}</tg-emoji>'
 
 
-# Хелперы для часто используемых эмодзи
-# Использование: text = f"{E.WAVE} Привет!"
-
-class E:
-    """Класс с константами для эмодзи (для удобства)"""
-    
-    # Основные
-    SCISSORS = emoji("👨‍🎨")
-    BARBER = emoji("💈")
-    CALENDAR = emoji("📅")  # PREMIUM
-    CALENDAR_ALT = emoji("🗓")  # PREMIUM
-    CLOCK = emoji("🕐")
-    CLOCK_9 = emoji("🕘")  # PREMIUM - часы 9:00
-    TIMER = emoji("⏲")  # PREMIUM - таймер
-    MASTER = emoji("👨‍💼")  # PREMIUM
-    USER = emoji("👤")  # PREMIUM
-    HOME = emoji("🏠")  # PREMIUM - главное меню
-    HOUSES = emoji("🏘")  # PREMIUM - главное меню альт
-    
-    # Статусы
-    CHECK = emoji("✅")  # PREMIUM
-    CROSS = emoji("❌")  # PREMIUM
-    EXCLAMATION = emoji("❗")  # PREMIUM - важно
-    WARNING = emoji("⚠️")  # Предупреждение
-    CHECK_SMALL = emoji("✓")  # PREMIUM
-    CROSS_SMALL = emoji("✗")  # PREMIUM
-    
-    # Информация
-    LIST = emoji("📋")
-    NOTE = emoji("📝")  # PREMIUM - заметка
-    CHART = emoji("📊")  # PREMIUM - анализ
-    PEACH = emoji("🍑")  # PREMIUM - анализ стикер
-    MONEY = emoji("💰")
-    LOCATION = emoji("📍")  # PREMIUM
-    PIN = emoji("📌")  # PREMIUM
-    PHONE = emoji("📞")  # PREMIUM
-    PHONE_GESTURE = emoji("🤙")  # PREMIUM - телефон жест
-    MOBILE = emoji("📱")  # PREMIUM
-    
-    # Действия
-    TARGET = emoji("🎯")
-    CLAP = emoji("👏")  # PREMIUM - аплодисменты
-    STAR = emoji("⭐")  # PREMIUM - рейтинг
-    IDEA = emoji("💡")
-    BOOK = emoji("📖")
-    ID = emoji("🆔")  # PREMIUM - ID номер
-    NUMBER = emoji("🔢")  # PREMIUM - цифры
-    COMMENT = emoji("💬")
-    EMPTY = emoji("✍️")
-    PLUS = emoji("➕")  # PREMIUM - добавить
-    RELOAD = emoji("🔄")  # PREMIUM - обновить
-    PEOPLE = emoji("👥")  # PREMIUM - группа
-    CAMERA = emoji("📸")  # PREMIUM - фото
-    SEARCH = emoji("🔎")  # PREMIUM - поиск
-    EYE = emoji("👁")  # PREMIUM - просмотр
-    LOCK = emoji("🔒")  # PREMIUM - безопасность
-    FOLDER = emoji("📂")  # PREMIUM - папка
-    ARTIST = emoji("👨‍🎨")  # PREMIUM - художник/стиль (мужчина)
-    ARTIST_WOMAN = emoji("👩‍🎨")  # PREMIUM - художник/мастер (женщина)
-    PALETTE = emoji("🎨")  # PREMIUM - палитра
-    PLANE = emoji("✈️")  # PREMIUM - отправить
-    WRITING = emoji("✍️")  # PREMIUM - написать/редактировать
-    LIGHTNING = emoji("⚡")  # PREMIUM - быстро/энергия
-    HAND_STOP = emoji("🤚")  # PREMIUM - стоп/рука
-    INFO = emoji("ℹ️")  # PREMIUM - информация
-    POINT_DOWN = emoji("👇")  # Палец вниз, указатель
-    ARROW_DOWN = emoji("⬇️")  # PREMIUM - стрелка вниз
-    LINK = emoji("🔗")  # Ссылка
-    LABEL = emoji("🏷")  # PREMIUM - ярлык, название
-    WOMAN = emoji("👩")  # PREMIUM - женщина, мастер
-    EMPTY = emoji("📭")  # PREMIUM - пусто
-    BOOK = emoji("📖")  # PREMIUM - книга, справка
-    WARNING = emoji("⚠️")  # PREMIUM - предупреждение
+def reply_icon_button(text: str, icon: str | None = None, **kwargs):
+    """Build a reply button, retaining custom-emoji fields when supported."""
+    data = {"text": text, **kwargs}
+    if icon:
+        data["icon_custom_emoji_id"] = EMOJI_IDS[icon]
+    return KeyboardButton.model_validate(data)
 
 
-def check_emoji_config() -> dict:
-    """
-    Проверяет конфигурацию эмодзи на наличие незаполненных ID
-    
-    Returns:
-        dict со статистикой: total, configured, missing
-    """
-    total = len(CUSTOM_EMOJIS)
-    missing = sum(1 for v in CUSTOM_EMOJIS.values() if v == "ЗАМЕНИТЕ_НА_REAL_ID")
-    configured = total - missing
-    
-    return {
-        "total": total,
-        "configured": configured,
-        "missing": missing,
-        "percent": round(configured / total * 100, 1) if total > 0 else 0
-    }
+def icon_button(text: str, icon: str | None = None, **kwargs):
+    """Build a button retaining Bot API custom-emoji fields on old aiogram."""
+    if not icon:
+        return InlineKeyboardButton(text=text, **kwargs)
+    data = {"text": text, **kwargs, "icon_custom_emoji_id": EMOJI_IDS[icon]}
+    # aiogram 3.7 rejects this newer Bot API field in its constructor, while
+    # model_validate preserves extra fields for serialization.
+    return InlineKeyboardButton.model_validate(data)
 
 
-if __name__ == "__main__":
-    # Самотестирование
-    print("🔍 Проверка конфигурации эмодзи...")
-    stats = check_emoji_config()
-    
-    print(f"\n📊 Статистика:")
-    print(f"   Всего эмодзи: {stats['total']}")
-    print(f"   Настроено: {stats['configured']}")
-    print(f"   Не настроено: {stats['missing']}")
-    print(f"   Прогресс: {stats['percent']}%")
-    
-    if stats['missing'] > 0:
-        print(f"\n⚠️ ВНИМАНИЕ: {stats['missing']} эмодзи без ID!")
-        print("   Получите ID из @userinfobot и замените ЗАМЕНИТЕ_НА_REAL_ID")
-    else:
-        print("\n✅ Все эмодзи настроены!")
-    
-    print("\n📝 Тест эмодзи:")
-    print(f"   Привет: {emoji('👋')}")
-    print(f"   Стрижка: {E.SCISSORS}")
-    print(f"   Успех: {E.CHECK}")
+FALLBACKS = {
+    "settings": "⚙️", "profile": "👤", "people": "👥", "file": "📁",
+    "smile": "🙂", "chart_growth": "📊", "chart_stats": "📊", "home": "🏘",
+    "lock": "🔒", "unlock": "🔓", "megaphone": "📣", "check": "✅",
+    "cross": "❌", "pencil": "🖋", "trash": "🗑", "down": "📰",
+    "attachment": "📎", "link": "🔗", "info": "ℹ️", "bot": "🤖",
+    "phone": "🤖", "eye": "👁", "hidden": "👁", "send": "⬆", "download": "⬇",
+    "bell": "🔔", "gift": "🎁", "clock": "⏰", "celebration": "🎉",
+    "font_link": "🔗", "write": "✍", "media": "🖼", "location": "📍",
+    "wallet": "👛", "box": "📦", "cryptobot": "👾", "calendar": "📅",
+    "tag": "🏷", "elapsed": "🕓", "apps": "📦", "brush": "🖌",
+    "add_text": "🔡", "format": "↔", "money": "🪙", "send_money": "🪙",
+    "receive_money": "🏧", "code": "🔨", "loading": "🔄",
+    "person_check": "👤", "person_cross": "👤",
+}
+
+
+def emoji(value: str, fallback: bool = True) -> str:
+    name = ALIASES.get(value)
+    if name:
+        return tg(name, value)
+    return value if fallback else ""
+
+
+class _EmojiNamespace:
+    def __getattr__(self, name):
+        key = name.lower()
+        legacy = {"scissors": "brush", "barber": "home", "master": "profile", "user": "profile", "houses": "home", "calendar_alt": "calendar", "clock_9": "clock", "timer": "elapsed", "exclamation": "info", "warning": "info", "check_small": "check", "cross_small": "cross", "list": "file", "note": "write", "chart": "chart_stats", "peach": "smile", "target": "apps", "clap": "celebration", "star": "smile", "idea": "info", "book": "file", "id": "info", "number": "apps", "comment": "info", "empty": "box", "plus": "add_text", "reload": "loading", "camera": "media", "search": "eye", "folder": "file", "artist": "brush", "artist_woman": "brush", "palette": "brush", "plane": "send", "writing": "write", "lightning": "loading", "hand_stop": "cross", "point_down": "down", "arrow_down": "down", "label": "tag", "woman": "profile"}
+        semantic = key if key in EMOJI_IDS else legacy.get(key, "info")
+        return tg(semantic, FALLBACKS[semantic])
+
+
+E = _EmojiNamespace()
 
 
 class P:
-    """Plain Unicode emojis for use in show_alert popups and plain text contexts.
-    Telegram's show_alert does not render HTML, so use these instead of E.*
-    """
-    CHECK = "✅"
-    CROSS = "❌"
-    WARNING = "⚠️"
-    EXCLAMATION = "❗"
-    EMPTY = "📭"
-    INFO = "ℹ️"
-    LOCK = "🔒"
-    SCISSORS = "✂️"
-    CALENDAR = "📅"
-    CLOCK = "🕐"
-    TIMER = "⏲"
-    STAR = "⭐"
-    PARTY = "🎉"
-    CLAP = "👏"
-    MONEY = "💰"
-    RELOAD = "🔄"
-    USER = "👤"
-    PHONE = "📞"
-    HOUSES = "🏘"
-    NOTE = "📝"
-    IDEA = "💡"
-    BOOK = "📖"
-    COMMENT = "💬"
-    PLANE = "✈️"
-    WRITING = "✍️"
-    LIGHTNING = "⚡"
-    HAND_STOP = "🤚"
-    ARROW_DOWN = "⬇️"
-    POINT_DOWN = "👇"
-    PLUS = "➕"
-    ARTIST = "👨‍🎨"
-    ARTIST_WOMAN = "👩‍🎨"
-    PEACH = "🍑"
-    LOCATION = "📍"
-    PIN = "📌"
-    SEARCH = "🔎"
-    EYE = "👁"
-    FOLDER = "📂"
-    PALETTE = "🎨"
-    BARBER = "💈"
-    CHART = "📊"
-    PEOPLE = "👥"
-    CAMERA = "📸"
-    EMPTY = "📭"
-    BOOK = "📖"
-    LINK = "🔗"
+    """Plain fallback glyphs for callback alerts (HTML is unsupported there)."""
+    CHECK, CROSS, WARNING, INFO, EMPTY = "✅", "❌", "⚠️", "ℹ️", "📦"
+
+
+CUSTOM_EMOJIS = {alias: EMOJI_IDS[name] for alias, name in ALIASES.items()}
+
+
+def check_emoji_config() -> dict:
+    mapping = CUSTOM_EMOJIS
+    total = len(mapping)
+    configured = sum(1 for value in mapping.values() if value)
+    return {"total": total, "configured": configured, "missing": total - configured, "percent": round(configured / total * 100, 1) if total else 0}

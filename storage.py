@@ -48,6 +48,13 @@ def normalize_master_key(master_key: str | None = None) -> str:
     return value or "default"
 
 
+def explicit_master_key(master: str | None) -> str:
+    """Use an explicit resource key when supplied; preserve legacy display-name calls."""
+    if master and "|" in master:
+        return normalize_master_key(master)
+    return normalize_master_key()
+
+
 def time_to_minutes(time_str: str) -> int:
     hours, minutes = time_str.split(":", 1)
     return int(hours) * 60 + int(minutes)
@@ -827,7 +834,7 @@ async def _has_unavailable_period_overlap(
 
 async def is_time_range_available(date: str, start_time: str, master: str, duration_minutes: int | None = None) -> bool:
     duration = normalize_duration_minutes(duration_minutes)
-    master_key = normalize_master_key()
+    master_key = explicit_master_key(master)
     async with _db.acquire() as conn:
         if not booking_range_fits_working_day(date, start_time, duration):
             return False
@@ -892,7 +899,13 @@ async def _active_future_booking_count(conn, telegram_id: int) -> int:
     return int(count or 0)
 
 
-async def save_booking(booking: dict) -> str | None:
+async def save_booking(
+    booking: dict,
+    *,
+    owner_id: int | None = None,
+    owner_token: str | None = None,
+    require_live_lock: bool = False,
+) -> str | None:
     duration_minutes = normalize_duration_minutes(
         booking.get("duration_minutes") or config.get_service_duration(booking.get("service", ""))
     )
@@ -927,6 +940,18 @@ async def save_booking(booking: dict) -> str | None:
                         # SQLite: BEGIN EXCLUSIVE already locks the DB, but we also
                         # do a manual check with INSERT OR FAIL pattern below
                         pass
+
+                if require_live_lock:
+                    if owner_id is None or not owner_token:
+                        raise _BookingRejected("live slot lock ownership required")
+                    placeholders = ",".join("?" for _ in requested_slots)
+                    owned_count = await conn.fetchval(
+                        f"SELECT COUNT(*) FROM slot_locks WHERE date=? AND master_key=? "
+                        f"AND time IN ({placeholders}) AND owner_id=? AND owner_token=? AND expires_at>?",
+                        booking["date"], master_key, *requested_slots, int(owner_id), owner_token, now,
+                    )
+                    if int(owned_count or 0) != len(requested_slots):
+                        raise _BookingRejected("slot lock expired or belongs to another owner")
 
                 if await _has_active_booking_overlap(
                     conn, booking["date"], booking["time"], booking["master"], duration_minutes, master_key
@@ -966,10 +991,16 @@ async def save_booking(booking: dict) -> str | None:
                                 booking_id, booking["date"], master_key, slot_time, now,
                             )
                         for lock_time in requested_slots:
-                            await conn.execute(
-                                "DELETE FROM slot_locks WHERE date=? AND time=? AND master_key=?",
-                                booking["date"], lock_time, master_key,
-                            )
+                            if require_live_lock:
+                                await conn.execute(
+                                    "DELETE FROM slot_locks WHERE date=? AND time=? AND master_key=? AND owner_id=? AND owner_token=?",
+                                    booking["date"], lock_time, master_key, int(owner_id), owner_token,
+                                )
+                            else:
+                                await conn.execute(
+                                    "DELETE FROM slot_locks WHERE date=? AND time=? AND master_key=?",
+                                    booking["date"], lock_time, master_key,
+                                )
 
                         booking["price"] = final_price
                         booking["duration_minutes"] = duration_minutes
@@ -1006,7 +1037,7 @@ async def get_booked_slots(date: str, master: str) -> list[dict]:
     async with _db.acquire() as conn:
         return await conn.fetch(
             "SELECT time, duration_minutes FROM bookings WHERE date=? AND master_key=? AND status='active'",
-            date, normalize_master_key(),
+            date, explicit_master_key(master),
         )
 
 
@@ -1905,7 +1936,7 @@ async def add_unavailable_period(
     master = master or config.MASTER_NAME
     start_time, end_time = _normalize_unavailable_range(start_time, end_time)
     now = get_now(config.TIMEZONE).isoformat()
-    master_key = normalize_master_key()
+    master_key = explicit_master_key(master)
     async with _db.acquire() as conn:
         if _db.is_postgres():
             return await conn.fetchval(
@@ -1928,7 +1959,7 @@ async def add_unavailable_slot(date: str, time: str, master: str | None = None, 
 
 async def get_unavailable_periods(date: str | None = None, master: str | None = None, limit: int = 50) -> list[dict]:
     master = master or config.MASTER_NAME
-    master_key = normalize_master_key()
+    master_key = explicit_master_key(master)
     async with _db.acquire() as conn:
         if date:
             return await conn.fetch(
@@ -2062,7 +2093,7 @@ async def get_locked_slots(date: str, master: str) -> set[str]:
         async with _db.acquire() as conn:
             rows = await conn.fetch(
                 "SELECT time FROM slot_locks WHERE date=? AND master_key=? AND expires_at > ?",
-                date, normalize_master_key(), now_iso,
+                date, explicit_master_key(master), now_iso,
             )
             return {r["time"] for r in rows}
     except Exception as e:
@@ -2266,7 +2297,7 @@ async def create_slot_lock(
     date: str,
     time: str,
     master: str,
-    ttl_minutes: int = 5,
+    ttl_minutes: int = 15,
     duration_minutes: int | None = None,
     owner_id: int | None = None,
     owner_token: str | None = None,
@@ -2274,7 +2305,7 @@ async def create_slot_lock(
     try:
         now = get_now(config.TIMEZONE)
         requested_slots = slot_times_for_range(time, duration_minutes or config.SLOT_STEP_MINUTES)
-        master_key = normalize_master_key()
+        master_key = explicit_master_key(master)
         owner_token = owner_token or ""
         async with _db.acquire() as conn:
             async with conn.transaction():
@@ -2315,42 +2346,27 @@ async def create_slot_lock(
 
                 await conn.execute("DELETE FROM slot_locks WHERE expires_at <= ?", now_iso)
                 for lock_time in requested_slots:
-                    existing = await conn.fetchrow(
-                        "SELECT owner_id, owner_token FROM slot_locks "
-                        "WHERE date=? AND time=? AND master_key=? AND expires_at > ?",
-                        date, lock_time, master_key, now_iso,
-                    )
-                    if existing and not (
-                        owner_id is not None
-                        and existing.get("owner_id") == owner_id
-                        and (existing.get("owner_token") or "") == owner_token
-                    ):
-                        return False
-                for lock_time in requested_slots:
                     await conn.execute(
                         "INSERT OR IGNORE INTO slot_locks "
                         "(date, time, master, master_key, owner_id, owner_token, locked_at, expires_at) "
                         "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                        date,
-                        lock_time,
-                        master,
-                        master_key,
-                        owner_id,
-                        owner_token,
-                        now_iso,
-                        expires_iso,
+                        date, lock_time, master, master_key, owner_id, owner_token, now_iso, expires_iso,
                     )
-                    await conn.execute(
-                        "UPDATE slot_locks SET owner_id=?, owner_token=?, locked_at=?, expires_at=? "
-                        "WHERE date=? AND time=? AND master_key=?",
-                        owner_id,
-                        owner_token,
-                        now_iso,
-                        expires_iso,
-                        date,
-                        lock_time,
-                        master_key,
+                    if owner_id is None and not owner_token:
+                        inserted = await conn.fetchrow(
+                            "SELECT owner_id, owner_token, locked_at FROM slot_locks WHERE date=? AND time=? AND master_key=?",
+                            date, lock_time, master_key,
+                        )
+                        if not inserted or inserted.get("locked_at") != now_iso:
+                            raise _SlotLockRejected("slot lock is held by another owner")
+                        continue
+                    updated = await conn.execute_count(
+                        "UPDATE slot_locks SET master=?, locked_at=?, expires_at=? "
+                        "WHERE date=? AND time=? AND master_key=? AND owner_id=? AND owner_token=?",
+                        master, now_iso, expires_iso, date, lock_time, master_key, owner_id, owner_token,
                     )
+                    if updated != 1:
+                        raise _SlotLockRejected("slot lock is held by another owner")
                 return True
     except _SlotLockRejected:
         return False
@@ -2375,7 +2391,7 @@ async def release_slot_lock(
 ):
     try:
         requested_slots = slot_times_for_range(time, duration_minutes or config.SLOT_STEP_MINUTES)
-        master_key = normalize_master_key()
+        master_key = explicit_master_key(master)
         owner_token = owner_token or ""
         async with _db.acquire() as conn:
             for lock_time in requested_slots:

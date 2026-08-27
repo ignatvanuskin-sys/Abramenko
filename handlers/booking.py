@@ -5,7 +5,7 @@ import logging
 import uuid
 from datetime import datetime, timedelta
 from aiogram import Router, F, Bot
-from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
@@ -16,7 +16,7 @@ import config
 import storage
 import scheduler
 from tz_utils import get_now
-from emoji_config import E, P
+from emoji_config import E, P, icon_button
 from handlers.start import ContactStates
 from utils import edit_with_retry, notify_admins
 
@@ -282,8 +282,8 @@ async def cb_book(callback: CallbackQuery, state: FSMContext):
             await callback.message.edit_text(
                 text,
                 reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                    [InlineKeyboardButton(text="Поделиться номером", callback_data="share_phone")],
-                    [InlineKeyboardButton(text="Назад", callback_data="main_menu")]
+                    [icon_button(text="Поделиться номером", callback_data="share_phone")],
+                    [icon_button(text="Назад", callback_data="main_menu")]
                 ]),
                 parse_mode="HTML"
             )
@@ -291,8 +291,8 @@ async def cb_book(callback: CallbackQuery, state: FSMContext):
             await callback.message.answer(
                 text,
                 reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                    [InlineKeyboardButton(text="Поделиться номером", callback_data="share_phone")],
-                    [InlineKeyboardButton(text="Назад", callback_data="main_menu")]
+                    [icon_button(text="Поделиться номером", callback_data="share_phone")],
+                    [icon_button(text="Назад", callback_data="main_menu")]
                 ]),
                 parse_mode="HTML"
             )
@@ -529,9 +529,9 @@ async def cb_choose_time(callback: CallbackQuery, state: FSMContext):
     await state.update_data(tg_name_suggestion=tg_name)
     name_rows = []
     if tg_name and re.match(r'^[a-zA-Zа-яА-ЯёЁ\s\-\']+$', tg_name) and re.search(r'[a-zA-Zа-яА-ЯёЁ]', tg_name) and len(tg_name) <= 50:
-        name_rows.append([InlineKeyboardButton(text=f"Использовать «{tg_name}»", callback_data="use_tg_name")])
-    name_rows.append([InlineKeyboardButton(text="Назад к времени", callback_data="back_to_time")])
-    name_rows.append([InlineKeyboardButton(text="Отменить", callback_data="cancel_booking")])
+        name_rows.append([icon_button(text=f"Использовать «{tg_name}»", callback_data="use_tg_name")])
+    name_rows.append([icon_button(text="Назад к времени", callback_data="back_to_time")])
+    name_rows.append([icon_button(text="Отменить", callback_data="cancel_booking")])
     back_kb = InlineKeyboardMarkup(inline_keyboard=name_rows)
 
     await _safe_edit(
@@ -758,8 +758,8 @@ async def cb_cancel_booking(callback: CallbackQuery, state: FSMContext):
         )
     await state.clear()
     book_again_kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="Записаться снова", callback_data="book")],
-        [InlineKeyboardButton(text="Главное меню", callback_data="main_menu")],
+        [icon_button(text="Записаться снова", callback_data="book")],
+        [icon_button(text="Главное меню", callback_data="main_menu")],
     ])
     await callback.message.edit_text(
         messages.BOOKING_CANCELLED,
@@ -877,9 +877,9 @@ async def cb_go_to_waitlist(callback: CallbackQuery, state: FSMContext):
     for i in range(0, len(busy_times), 4):
         row = []
         for time_str in busy_times[i:i+4]:
-            row.append(InlineKeyboardButton(text=f"🔴 {time_str}", callback_data=f"waitlist:{time_str}"))
+            row.append(icon_button(text=time_str, icon="cross", callback_data=f"waitlist:{time_str}"))
         buttons.append(row)
-    buttons.append([InlineKeyboardButton(text="Назад", callback_data="back_to_time")])
+    buttons.append([icon_button(text="Назад", callback_data="back_to_time")])
 
     await _safe_edit(
         callback.message,

@@ -2,9 +2,9 @@
 import messages
 import config
 from datetime import datetime
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, KeyboardButton
+from aiogram.types import InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton
+from emoji_config import icon_button
 from config import SERVICES
-
 # Button text: plain text ONLY — no emojis (neither Unicode nor premium tg-emoji).
 # Telegram inline button text is plain text, HTML tags are not rendered.
 
@@ -22,17 +22,17 @@ def _safe_cb(prefix: str, value: str, max_bytes: int = 62) -> str:
 
 def main_menu_kb() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="Записаться", callback_data="demo_book")],
-        [InlineKeyboardButton(text="Услуги и цены", callback_data="demo_faq:services"),
-         InlineKeyboardButton(text="Цены", callback_data="demo_faq:prices")],
-        [InlineKeyboardButton(text="Адреса", callback_data="demo_faq:addresses"),
-         InlineKeyboardButton(text="График", callback_data="demo_faq:hours")],
-        [InlineKeyboardButton(text="Портфолио", callback_data="demo_faq:portfolio"),
-         InlineKeyboardButton(text="Контакты", callback_data="demo_faq:contacts")],
-        [InlineKeyboardButton(text="О студии", callback_data="demo_faq:about")],
-        [InlineKeyboardButton(text="Стать моделью", callback_data="demo_lead:model")],
-        [InlineKeyboardButton(text="Вакансии", callback_data="demo_lead:vacancy")],
-        [InlineKeyboardButton(text="Курс «Колорист с нуля»", callback_data="demo_lead:course")],
+        [icon_button("Записаться", "calendar", callback_data="demo_book")],
+        [icon_button("Услуги и цены", "money", callback_data="demo_faq:services"),
+         icon_button("Цены", "money", callback_data="demo_faq:prices")],
+        [icon_button("Адреса", "location", callback_data="demo_faq:addresses"),
+         icon_button("График", "clock", callback_data="demo_faq:hours")],
+        [icon_button("Портфолио", "media", callback_data="demo_faq:portfolio"),
+         icon_button("Контакты", "phone", callback_data="demo_faq:contacts")],
+        [icon_button("О студии", "info", callback_data="demo_faq:about")],
+        [icon_button("Стать моделью", "people", callback_data="demo_lead:model")],
+        [icon_button("Вакансии", "people", callback_data="demo_lead:vacancy")],
+        [icon_button("Курс «Колорист с нуля»", "write", callback_data="demo_lead:course")],
     ])
 
 
@@ -44,12 +44,12 @@ async def services_kb(back: str = "main_menu") -> InlineKeyboardMarkup:
         row = []
         for name in service_list[i:i+2]:
             display = (name[:18] + "…") if len(name.encode("utf-8")) > 38 else name
-            row.append(InlineKeyboardButton(
+            row.append(icon_button(
                 text=display,
                 callback_data=_safe_cb("service:", name),
             ))
         buttons.append(row)
-    buttons.append([InlineKeyboardButton(text="Назад", callback_data=back)])
+    buttons.append([icon_button(text="Назад", callback_data=back)])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
@@ -68,33 +68,41 @@ def dates_kb(dates: list[str], back: str = "back_to_service") -> InlineKeyboardM
     for i in range(0, len(dates), 2):
         row = []
         for d in dates[i:i+2]:
-            row.append(InlineKeyboardButton(text=_format_date(d), callback_data=f"date:{d}"))
+            row.append(icon_button(text=_format_date(d), callback_data=f"date:{d}"))
         buttons.append(row)
-    buttons.append([InlineKeyboardButton(text="Назад", callback_data=back)])
+    buttons.append([icon_button(text="Назад", callback_data=back)])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
-def time_slots_kb(slots: dict[str, str], back: str = "back_to_date") -> InlineKeyboardMarkup:
+def time_slots_kb(
+    slots: dict[str, str],
+    back: str = "back_to_date",
+    *,
+    allow_waitlist: bool = True,
+    cancel: str | None = None,
+) -> InlineKeyboardMarkup:
     buttons = []
     free_slots = [(time_str, status) for time_str, status in slots.items() if status == "free"]
     if not free_slots:
-        return InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="Нет свободных слотов", callback_data="no_slots")],
-            [InlineKeyboardButton(text="Лист ожидания", callback_data="go_to_waitlist")],
-            [InlineKeyboardButton(text="Назад", callback_data=back)]
-        ])
+        rows = [[icon_button(text="Нет свободных слотов", callback_data="no_slots")]]
+        if allow_waitlist:
+            rows.append([icon_button(text="Лист ожидания", callback_data="go_to_waitlist")])
+        rows.append([icon_button(text="Назад", callback_data=back)])
+        if cancel:
+            rows.append([icon_button(text="Отмена", callback_data=cancel)])
+        return InlineKeyboardMarkup(inline_keyboard=rows)
     for i in range(0, len(free_slots), 4):
         row = []
         for time_str, status in free_slots[i:i+4]:
-            row.append(InlineKeyboardButton(text=time_str, callback_data=f"time:{time_str}"))
+            row.append(icon_button(text=time_str, callback_data=f"time:{time_str}"))
         buttons.append(row)
-    buttons.append([InlineKeyboardButton(text="Назад", callback_data=back)])
+    buttons.append([icon_button(text="Назад", callback_data=back)])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
 def back_to_main_kb() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="Назад в меню", callback_data="main_menu")],
+        [icon_button(text="Назад в меню", callback_data="main_menu")],
     ])
 
 
@@ -102,9 +110,9 @@ def booking_success_kb(booking_id: str = None) -> InlineKeyboardMarkup:
     buttons = []
     if booking_id:
         buttons.append([
-            InlineKeyboardButton(text="Отменить", callback_data=f"ask_cancel:{booking_id}"),
+            icon_button(text="Отменить", callback_data=f"ask_cancel:{booking_id}"),
         ])
-    buttons.append([InlineKeyboardButton(text="Назад в меню", callback_data="main_menu")])
+    buttons.append([icon_button(text="Назад в меню", callback_data="main_menu")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
@@ -112,28 +120,28 @@ def bookings_list_kb(bookings: list[dict]) -> InlineKeyboardMarkup:
     buttons = []
     for b in bookings:
         date_str = _format_date(b["date"])
-        buttons.append([InlineKeyboardButton(
+        buttons.append([icon_button(
             text=f"{date_str} {b['time']} — {b['service']}",
             callback_data=f"booking_detail:{b['id']}"
         )])
-    buttons.append([InlineKeyboardButton(text="Назад в меню", callback_data="main_menu")])
+    buttons.append([icon_button(text="Назад в меню", callback_data="main_menu")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
 def booking_detail_kb(booking_id: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text="Отменить", callback_data=f"ask_cancel:{booking_id}"),
+            icon_button(text="Отменить", callback_data=f"ask_cancel:{booking_id}"),
         ],
-        [InlineKeyboardButton(text="Назад в меню", callback_data="main_menu")],
+        [icon_button(text="Назад в меню", callback_data="main_menu")],
     ])
 
 
 def confirm_cancel_kb(booking_id: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text="Да, отменить", callback_data=f"confirm_cancel:{booking_id}"),
-            InlineKeyboardButton(text="Нет, вернуться", callback_data=f"booking_detail:{booking_id}"),
+            icon_button(text="Да, отменить", callback_data=f"confirm_cancel:{booking_id}"),
+            icon_button(text="Нет, вернуться", callback_data=f"booking_detail:{booking_id}"),
         ],
     ])
 
@@ -146,7 +154,7 @@ def phone_kb() -> ReplyKeyboardMarkup:
 
 def review_kb(booking_id: str) -> InlineKeyboardMarkup:
     labels = ["1", "2", "3", "4", "5"]
-    row = [InlineKeyboardButton(text=label, callback_data=f"review:{booking_id}:{i}")
+    row = [icon_button(text=label, callback_data=f"review:{booking_id}:{i}")
            for i, label in enumerate(labels, start=1)]
     return InlineKeyboardMarkup(inline_keyboard=[row])
 
@@ -154,27 +162,27 @@ def review_kb(booking_id: str) -> InlineKeyboardMarkup:
 def remind_kb(booking_id: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text="Приду", callback_data=f"remind_confirm:{booking_id}"),
-            InlineKeyboardButton(text="Отменить", callback_data=f"remind_cancel:{booking_id}"),
+            icon_button(text="Приду", callback_data=f"remind_confirm:{booking_id}"),
+            icon_button(text="Отменить", callback_data=f"remind_cancel:{booking_id}"),
         ],
     ])
 
 
 def remind_cancel_kb(booking_id: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="Отменить запись", callback_data=f"remind_cancel:{booking_id}")],
+        [icon_button(text="Отменить запись", callback_data=f"remind_cancel:{booking_id}")],
     ])
 
 
 def remind_2h_kb(booking_id: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="Буду!", callback_data=f"remind_confirm:{booking_id}")],
+        [icon_button(text="Буду!", callback_data=f"remind_confirm:{booking_id}")],
     ])
 
 
 def skip_comment_kb() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="Пропустить", callback_data="skip_comment")],
+        [icon_button(text="Пропустить", callback_data="skip_comment")],
     ])
 
 
@@ -183,8 +191,8 @@ def cancel_bookings_kb(bookings: list) -> InlineKeyboardMarkup:
     for b in bookings:
         date_str = _format_date(b['date'])
         label = f"{date_str} {b['time']} — {b['service'][:12]}"
-        buttons.append([InlineKeyboardButton(text=label, callback_data=f"cancel_book:{b['id']}")])
-    buttons.append([InlineKeyboardButton(text="Назад в меню", callback_data="main_menu")])
+        buttons.append([icon_button(text=label, callback_data=f"cancel_book:{b['id']}")])
+    buttons.append([icon_button(text="Назад в меню", callback_data="main_menu")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
@@ -192,29 +200,29 @@ def portfolio_kb(photo_id: int, has_prev: bool, has_next: bool, links: list[dict
     rows = []
     nav_row = []
     if has_prev:
-        nav_row.append(InlineKeyboardButton(text="< Назад", callback_data=f"portfolio_page:{photo_id - 1}"))
+        nav_row.append(icon_button(text="< Назад", callback_data=f"portfolio_page:{photo_id - 1}"))
     if has_next:
-        nav_row.append(InlineKeyboardButton(text="Далее >", callback_data=f"portfolio_page:{photo_id + 1}"))
+        nav_row.append(icon_button(text="Далее >", callback_data=f"portfolio_page:{photo_id + 1}"))
     if nav_row:
         rows.append(nav_row)
 
     for i in range(0, len(links), 2):
         row = []
         for link in links[i:i+2]:
-            row.append(InlineKeyboardButton(text=link["platform"], url=link["url"]))
+            row.append(icon_button(text=link["platform"], url=link["url"]))
         rows.append(row)
 
-    rows.append([InlineKeyboardButton(text="Назад в меню", callback_data="main_menu")])
+    rows.append([icon_button(text="Назад в меню", callback_data="main_menu")])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
 def portfolio_admin_kb() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text="Добавить фото", callback_data="admin_add_portfolio_photo"),
-            InlineKeyboardButton(text="Удалить фото", callback_data="admin_delete_portfolio_photo"),
+            icon_button(text="Добавить фото", callback_data="admin_add_portfolio_photo"),
+            icon_button(text="Удалить фото", callback_data="admin_delete_portfolio_photo"),
         ],
-        [InlineKeyboardButton(text="Назад", callback_data="admin")],
+        [icon_button(text="Назад", callback_data="admin")],
     ])
 
 
@@ -223,11 +231,11 @@ def portfolio_delete_list_kb(photos: list[dict]) -> InlineKeyboardMarkup:
     for p in photos:
         caption = p.get("caption") or "без подписи"
         caption = caption[:30] + "…" if len(caption) > 30 else caption
-        buttons.append([InlineKeyboardButton(
+        buttons.append([icon_button(
             text=f"#{p['id']} — {caption}",
             callback_data=f"admin_confirm_delete_photo:{p['id']}"
         )])
-    buttons.append([InlineKeyboardButton(text="Назад", callback_data="admin_portfolio")])
+    buttons.append([icon_button(text="Назад", callback_data="admin_portfolio")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
@@ -235,13 +243,13 @@ def social_links_admin_kb(links: list[dict]) -> InlineKeyboardMarkup:
     buttons = []
     for link in links:
         platform = link["platform"][:20]
-        buttons.append([InlineKeyboardButton(
+        buttons.append([icon_button(
             text=f"{platform}",
             callback_data=f"admin_delete_social_link:{link['id']}"
         )])
     buttons.append([
-        InlineKeyboardButton(text="Добавить", callback_data="admin_add_social_link"),
-        InlineKeyboardButton(text="Назад", callback_data="admin"),
+        icon_button(text="Добавить", callback_data="admin_add_social_link"),
+        icon_button(text="Назад", callback_data="admin"),
     ])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
@@ -249,8 +257,8 @@ def social_links_admin_kb(links: list[dict]) -> InlineKeyboardMarkup:
 def confirm_delete_photo_kb(photo_id: int) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text="Да, удалить", callback_data=f"admin_delete_photo_confirm:{photo_id}"),
-            InlineKeyboardButton(text="Отмена", callback_data="admin_portfolio"),
+            icon_button(text="Да, удалить", callback_data=f"admin_delete_photo_confirm:{photo_id}"),
+            icon_button(text="Отмена", callback_data="admin_portfolio"),
         ],
     ])
 
@@ -258,24 +266,24 @@ def confirm_delete_photo_kb(photo_id: int) -> InlineKeyboardMarkup:
 def admin_kb() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text="Записи", callback_data="admin_bookings"),
-            InlineKeyboardButton(text="Услуги", callback_data="admin_services"),
+            icon_button(text="Записи", callback_data="admin_bookings"),
+            icon_button(text="Услуги", callback_data="admin_services"),
         ],
         [
-            InlineKeyboardButton(text="Портфолио", callback_data="admin_portfolio"),
-            InlineKeyboardButton(text="Соц.сети", callback_data="admin_social_links"),
+            icon_button(text="Портфолио", callback_data="admin_portfolio"),
+            icon_button(text="Соц.сети", callback_data="admin_social_links"),
         ],
         [
-            InlineKeyboardButton(text="Настройки", callback_data="admin_settings"),
-            InlineKeyboardButton(text="Экспорт CSV", callback_data="admin_export"),
+            icon_button(text="Настройки", callback_data="admin_settings"),
+            icon_button(text="Экспорт CSV", callback_data="admin_export"),
         ],
         [
-            InlineKeyboardButton(text="Статистика", callback_data="admin_stats"),
-            InlineKeyboardButton(text="Рассылка", callback_data="admin_broadcast"),
+            icon_button(text="Статистика", callback_data="admin_stats"),
+            icon_button(text="Рассылка", callback_data="admin_broadcast"),
         ],
-        [InlineKeyboardButton(text="Аудит", callback_data="admin_audit")],
-        [InlineKeyboardButton(text="Блокировки", callback_data="admin_unavailable")],
-        [InlineKeyboardButton(text="Назад в меню", callback_data="main_menu")],
+        [icon_button(text="Аудит", callback_data="admin_audit")],
+        [icon_button(text="Блокировки", callback_data="admin_unavailable")],
+        [icon_button(text="Назад в меню", callback_data="main_menu")],
     ])
 
 
@@ -286,14 +294,14 @@ def admin_services_kb() -> InlineKeyboardMarkup:
         row = []
         for service, price in service_items[i:i+2]:
             display = service[:18] + "…" if len(service.encode("utf-8")) > 38 else service
-            row.append(InlineKeyboardButton(
+            row.append(icon_button(
                 text=display,
                 callback_data=f"admin_service_detail:{service}"
             ))
         buttons.append(row)
     buttons.append([
-        InlineKeyboardButton(text="Добавить услугу", callback_data="admin_add_service"),
-        InlineKeyboardButton(text="Назад", callback_data="admin"),
+        icon_button(text="Добавить услугу", callback_data="admin_add_service"),
+        icon_button(text="Назад", callback_data="admin"),
     ])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
@@ -301,39 +309,39 @@ def admin_services_kb() -> InlineKeyboardMarkup:
 def admin_service_detail_kb(name: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text="Редактировать", callback_data=_safe_cb("admin_edit_service:", name)),
-            InlineKeyboardButton(text="Удалить", callback_data=_safe_cb("admin_remove_service:", name)),
+            icon_button(text="Редактировать", callback_data=_safe_cb("admin_edit_service:", name)),
+            icon_button(text="Удалить", callback_data=_safe_cb("admin_remove_service:", name)),
         ],
-        [InlineKeyboardButton(text="Назад", callback_data="admin_services")],
+        [icon_button(text="Назад", callback_data="admin_services")],
     ])
 
 
 def admin_unavailable_kb(periods: list[dict]) -> InlineKeyboardMarkup:
-    rows = [[InlineKeyboardButton(text="Добавить блокировку", callback_data="admin_add_unavailable")]]
+    rows = [[icon_button(text="Добавить блокировку", callback_data="admin_add_unavailable")]]
     for period in periods[:10]:
         label = f"Удалить #{period['id']}"
-        rows.append([InlineKeyboardButton(text=label[:40], callback_data=f"admin_delete_unavailable:{period['id']}")])
-    rows.append([InlineKeyboardButton(text="Назад", callback_data="admin")])
+        rows.append([icon_button(text=label[:40], callback_data=f"admin_delete_unavailable:{period['id']}")])
+    rows.append([icon_button(text="Назад", callback_data="admin")])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
 def admin_settings_kb() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text="Адрес", callback_data="admin_change_address"),
-            InlineKeyboardButton(text="Телефон", callback_data="admin_change_phone"),
+            icon_button(text="Адрес", callback_data="admin_change_address"),
+            icon_button(text="Телефон", callback_data="admin_change_phone"),
         ],
         [
-            InlineKeyboardButton(text="Часы работы", callback_data="admin_change_hours"),
-            InlineKeyboardButton(text="Название", callback_data="admin_change_salon_name"),
+            icon_button(text="Часы работы", callback_data="admin_change_hours"),
+            icon_button(text="Название", callback_data="admin_change_salon_name"),
         ],
         [
-            InlineKeyboardButton(text="Имя мастера", callback_data="admin_change_master_name"),
-            InlineKeyboardButton(text="Описание", callback_data="admin_change_master_desc"),
+            icon_button(text="Имя мастера", callback_data="admin_change_master_name"),
+            icon_button(text="Описание", callback_data="admin_change_master_desc"),
         ],
         [
-            InlineKeyboardButton(text="Опыт", callback_data="admin_change_master_exp"),
-            InlineKeyboardButton(text="Назад", callback_data="admin"),
+            icon_button(text="Опыт", callback_data="admin_change_master_exp"),
+            icon_button(text="Назад", callback_data="admin"),
         ],
     ])
 
@@ -341,13 +349,13 @@ def admin_settings_kb() -> InlineKeyboardMarkup:
 def admin_cancel_booking_kb(booking_id: str, telegram_id: int | None = None, user_blocked: bool = False) -> InlineKeyboardMarkup:
     rows = [
         [
-            InlineKeyboardButton(text="Отменить", callback_data=f"admin_pre_cancel:{booking_id}"),
-            InlineKeyboardButton(text="Завершить", callback_data=f"admin_complete_booking:{booking_id}"),
+            icon_button(text="Отменить", callback_data=f"admin_pre_cancel:{booking_id}"),
+            icon_button(text="Завершить", callback_data=f"admin_complete_booking:{booking_id}"),
         ],
     ]
     if telegram_id:
         action = "unblock" if user_blocked else "block"
         text = "Разблокировать" if user_blocked else "Заблокировать"
-        rows.append([InlineKeyboardButton(text=text, callback_data=f"admin_user_block:{telegram_id}:{action}:{booking_id}")])
-    rows.append([InlineKeyboardButton(text="Назад", callback_data="admin_bookings")])
+        rows.append([icon_button(text=text, callback_data=f"admin_user_block:{telegram_id}:{action}:{booking_id}")])
+    rows.append([icon_button(text="Назад", callback_data="admin_bookings")])
     return InlineKeyboardMarkup(inline_keyboard=rows)

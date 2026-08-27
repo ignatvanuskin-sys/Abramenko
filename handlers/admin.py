@@ -10,7 +10,7 @@ import time as _time
 from datetime import datetime, timedelta
 from pathlib import Path
 from aiogram import Router, F, Bot
-from aiogram.types import CallbackQuery, Message, FSInputFile, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import CallbackQuery, Message, FSInputFile, InlineKeyboardMarkup
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
@@ -21,7 +21,7 @@ import config
 import storage
 import scheduler
 from utils import send_with_retry, edit_with_retry
-from emoji_config import E
+from emoji_config import E, icon_button
 
 logger = logging.getLogger(__name__)
 
@@ -77,7 +77,7 @@ class AdminStates(StatesGroup):
 async def cmd_admin(message: Message, state: FSMContext):
     await state.clear()
     if not _is_admin(message.from_user.id):
-        await send_with_retry(message.bot, message.chat.id, messages.ADMIN_ONLY)
+        await send_with_retry(message.bot, message.chat.id, messages.ADMIN_ONLY_HTML, parse_mode="HTML")
         return
     await send_with_retry(message.bot, message.chat.id, f"{E.LOCK} <b>Панель управления</b>", reply_markup=keyboards.admin_kb(), parse_mode="HTML")
 
@@ -102,7 +102,7 @@ def _parse_telegram_id_arg(text: str | None) -> int | None:
 @router.message(Command("privacy_export"))
 async def cmd_privacy_export(message: Message):
     if not _is_admin(message.from_user.id):
-        await send_with_retry(message.bot, message.chat.id, messages.ADMIN_ONLY)
+        await send_with_retry(message.bot, message.chat.id, messages.ADMIN_ONLY_HTML, parse_mode="HTML")
         return
     telegram_id = _parse_telegram_id_arg(message.text)
     if not telegram_id:
@@ -135,7 +135,7 @@ async def cmd_privacy_export(message: Message):
 @router.message(Command("privacy_delete"))
 async def cmd_privacy_delete(message: Message):
     if not _is_admin(message.from_user.id):
-        await send_with_retry(message.bot, message.chat.id, messages.ADMIN_ONLY)
+        await send_with_retry(message.bot, message.chat.id, messages.ADMIN_ONLY_HTML, parse_mode="HTML")
         return
     telegram_id = _parse_telegram_id_arg(message.text)
     if not telegram_id:
@@ -515,19 +515,20 @@ async def _show_admin_bookings_page(callback, offset: int = 0):
             text += f"{E.EMPTY} Нет активных записей.\n"
         kb_rows = []
         for b in page_items:
-            kb_rows.append([InlineKeyboardButton(
-                text=f"✏️ {b['id']} — {keyboards._format_date(b['date'])} {b['time']}",
+            kb_rows.append([icon_button(
+                text=f"{b['id']} — {keyboards._format_date(b['date'])} {b['time']}",
+                icon="pencil",
                 callback_data=f"admin_manage_booking:{b['id']}"
             )])
         nav_buttons = []
         if offset > 0:
-            nav_buttons.append(InlineKeyboardButton(text="◄ Назад", callback_data=f"admin_bookings_page:{offset - PAGE}"))
-        nav_buttons.append(InlineKeyboardButton(text=f"{offset // PAGE + 1}/{(total - 1) // PAGE + 1 if total else 1}", callback_data="noop"))
+            nav_buttons.append(icon_button(text="◄ Назад", callback_data=f"admin_bookings_page:{offset - PAGE}"))
+        nav_buttons.append(icon_button(text=f"{offset // PAGE + 1}/{(total - 1) // PAGE + 1 if total else 1}", callback_data="noop"))
         if offset + PAGE < total:
-            nav_buttons.append(InlineKeyboardButton(text="Дальше ►", callback_data=f"admin_bookings_page:{offset + PAGE}"))
+            nav_buttons.append(icon_button(text="Дальше ►", callback_data=f"admin_bookings_page:{offset + PAGE}"))
         if nav_buttons:
             kb_rows.append(nav_buttons)
-        kb_rows.append([InlineKeyboardButton(text="Назад в панель", callback_data="admin")])
+        kb_rows.append([icon_button(text="Назад в панель", callback_data="admin")])
         await edit_with_retry(callback.message, text, reply_markup=InlineKeyboardMarkup(inline_keyboard=kb_rows), parse_mode="HTML")
     except Exception as e:
         logger.error(f"Error in admin_bookings: {e}")
@@ -860,8 +861,8 @@ async def cb_admin_remove_service(callback: CallbackQuery):
         logger.error(f"Failed to check active bookings for service: {e}")
     confirm_kb = InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text=f"{E.CHECK} Да, удалить", callback_data=f"admin_confirm_remove_service:{service_name}"),
-            InlineKeyboardButton(text=f"{E.CROSS} Отмена", callback_data=f"admin_service_detail:{service_name}"),
+            icon_button(text="Да, удалить", icon="check", callback_data=f"admin_confirm_remove_service:{service_name}"),
+            icon_button(text="Отмена", icon="cross", callback_data=f"admin_service_detail:{service_name}"),
         ]
     ])
     await edit_with_retry(
@@ -1234,8 +1235,8 @@ async def cb_admin_pre_cancel(callback: CallbackQuery):
             return
         confirm_kb = InlineKeyboardMarkup(inline_keyboard=[
             [
-                InlineKeyboardButton(text=f"{E.CROSS} Да, отменить", callback_data=f"admin_cancel:{booking_id}"),
-                InlineKeyboardButton(text="Нет, вернуться", callback_data=f"admin_manage_booking:{booking_id}"),
+                icon_button(text="Да, отменить", icon="cross", callback_data=f"admin_cancel:{booking_id}"),
+                icon_button(text="Нет, вернуться", callback_data=f"admin_manage_booking:{booking_id}"),
             ]
         ])
         await edit_with_retry(

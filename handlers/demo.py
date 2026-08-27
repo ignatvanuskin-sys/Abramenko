@@ -1,3 +1,4 @@
+from emoji_config import icon_button
 # screenpipe — AI that knows everything you've seen, said, or heard; https://screenpipe.com
 """Validated, persist-first FSM requests for Abramenko Studio."""
 
@@ -11,7 +12,7 @@ from datetime import datetime
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
+from aiogram.types import CallbackQuery, InlineKeyboardMarkup, Message
 
 import config
 import demo_repository
@@ -30,10 +31,10 @@ MAX_TEXT_FIELD = 200
 
 
 def kb(items, prefix, extra=None):
-    rows = [[InlineKeyboardButton(text=x, callback_data=f"{prefix}:{i}")] for i, x in enumerate(items)]
+    rows = [[icon_button(text=x, callback_data=f"{prefix}:{i}")] for i, x in enumerate(items)]
     if extra:
-        rows.append([InlineKeyboardButton(text=extra[0], callback_data=extra[1])])
-    rows.append([InlineKeyboardButton(text="Отмена", callback_data="demo_cancel")])
+        rows.append([icon_button(text=extra[0], callback_data=extra[1])])
+    rows.append([icon_button(text="Отмена", callback_data="demo_cancel")])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
@@ -72,11 +73,15 @@ def normalized_payload(data: dict) -> dict:
 
 def retry_kb(request_id: str) -> InlineKeyboardMarkup:
     # UUID request IDs keep this callback well below Telegram's 64-byte limit.
-    return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="Повторить отправку", callback_data=f"demo_retry:{request_id}")]])
+    return InlineKeyboardMarkup(inline_keyboard=[[icon_button(text="Повторить отправку", callback_data=f"demo_retry:{request_id}")]])
 
 
-async def _retry_failure(message, request_id: str):
-    await message.answer("Заявка сохранена, но уведомление не отправлено. Попробуйте позже.", reply_markup=retry_kb(request_id))
+async def _retry_failure(message, request_id: str, *, booking_created: bool = False):
+    prefix = "Запись уже создана. " if booking_created else ""
+    await message.answer(
+        prefix + "Заявка сохранена, но уведомление не отправлено. Нажмите «Повторить отправку» позже.",
+        reply_markup=retry_kb(request_id),
+    )
 
 
 async def finish(message, state, kind, request_type):
@@ -85,6 +90,7 @@ async def finish(message, state, kind, request_type):
     canonical = json.dumps(payload, ensure_ascii=False, sort_keys=True)
     key = hashlib.sha256(f"{message.from_user.id}:{request_type}:{canonical}".encode()).hexdigest()
     row = await demo_repository.create_or_get_request(request_type, message.from_user.id, payload, key)
+    booking_created = bool(data.get("booking_id"))
     if row["notification_status"] == "sent":
         await state.clear()
         return await message.answer("Заявка уже сохранена и передана администратору.")
@@ -93,7 +99,7 @@ async def finish(message, state, kind, request_type):
         error = "ADMIN_CHAT_ID не настроен"
         await demo_repository.update_notification(row["id"], "failed", error)
         await state.clear()
-        return await _retry_failure(message, row["id"])
+        return await _retry_failure(message, row["id"], booking_created=booking_created)
     if not await demo_repository.claim_notification(row["id"]):
         await state.clear()
         return await message.answer("Заявка уже обрабатывается или передана администратору.")
@@ -102,7 +108,7 @@ async def finish(message, state, kind, request_type):
     except Exception as exc:
         await demo_repository.update_notification(row["id"], "failed", str(exc)[:1000])
         await state.clear()
-        return await _retry_failure(message, row["id"])
+        return await _retry_failure(message, row["id"], booking_created=booking_created)
     # Telegram has no transactional send+DB primitive: a crash after send can cause
     # at-most-once delivery (or a retry can duplicate), so this is deliberately not
     # advertised as exactly-once. Failed claims remain retryable.
@@ -133,7 +139,7 @@ class Lead(StatesGroup):
     fields = State(); confirm = State()
 
 
-@router.callback_query(F.data == "demo_book")
+@router.callback_query(F.data == "legacy_demo_book")
 async def start_booking(c: CallbackQuery, state: FSMContext):
     await state.clear(); await state.set_state(Booking.service)
     await c.message.edit_text("Выберите услугу:", reply_markup=kb(SERVICES, "demo_service")); await c.answer()
@@ -317,7 +323,7 @@ async def retry(c: CallbackQuery):
 async def faq(c: CallbackQuery):
     key = c.data.rsplit(":", 1)[1]
     text = FAQ.get(key, "Точную информацию уточнит администратор.")
-    await c.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="Назад", callback_data="main_menu")]])); await c.answer()
+    await c.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=[[icon_button(text="Назад", callback_data="main_menu")]])); await c.answer()
 
 
 @router.callback_query(F.data == "demo_cancel")

@@ -2,14 +2,14 @@
 import html as html_lib
 import logging
 from aiogram import Router, F
-from aiogram.types import Message, CallbackQuery, InlineKeyboardButton, InputMediaPhoto
+from aiogram.types import Message, CallbackQuery, InputMediaPhoto
 
 import messages
 import keyboards
 import config
 import storage
 from utils import edit_with_retry
-from emoji_config import E
+from emoji_config import E, icon_button
 
 logger = logging.getLogger(__name__)
 
@@ -31,9 +31,9 @@ async def cb_contacts(callback: CallbackQuery):
             for i in range(0, len(links), 2):
                 row = []
                 for link in links[i:i+2]:
-                    row.append(InlineKeyboardButton(text=link["platform"], url=link["url"]))
+                    row.append(icon_button(text=link["platform"], url=link["url"]))
                 rows.append(row)
-            rows.append([InlineKeyboardButton(text="Назад в меню", callback_data="main_menu")])
+            rows.append([icon_button(text="Назад в меню", callback_data="main_menu")])
             from aiogram.types import InlineKeyboardMarkup
             kb = InlineKeyboardMarkup(inline_keyboard=rows)
 
