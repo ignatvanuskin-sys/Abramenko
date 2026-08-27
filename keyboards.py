@@ -27,11 +27,7 @@ def main_menu_kb() -> InlineKeyboardMarkup:
          icon_button("Цены", "money", callback_data="demo_faq:prices")],
         [icon_button("Адреса", "location", callback_data="demo_faq:addresses"),
          icon_button("График", "clock", callback_data="demo_faq:hours")],
-        [icon_button("Портфолио", "media", callback_data="demo_faq:portfolio"),
-         icon_button("Контакты", "phone", callback_data="demo_faq:contacts")],
-        [icon_button("О студии", "info", callback_data="demo_faq:about")],
         [icon_button("Стать моделью", "people", callback_data="demo_lead:model")],
-        [icon_button("Вакансии", "people", callback_data="demo_lead:vacancy")],
         [icon_button("Курс «Колорист с нуля»", "write", callback_data="demo_lead:course")],
     ])
 
@@ -63,12 +59,12 @@ def _format_date(date_str: str) -> str:
         return date_str
 
 
-def dates_kb(dates: list[str], back: str = "back_to_service") -> InlineKeyboardMarkup:
+def dates_kb(dates: list[str], back: str = "back_to_service", prefix: str = "date:") -> InlineKeyboardMarkup:
     buttons = []
     for i in range(0, len(dates), 2):
         row = []
         for d in dates[i:i+2]:
-            row.append(icon_button(text=_format_date(d), callback_data=f"date:{d}"))
+            row.append(icon_button(text=_format_date(d), callback_data=f"{prefix}{d}"))
         buttons.append(row)
     buttons.append([icon_button(text="Назад", callback_data=back)])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
@@ -80,6 +76,7 @@ def time_slots_kb(
     *,
     allow_waitlist: bool = True,
     cancel: str | None = None,
+    prefix: str = "time:",
 ) -> InlineKeyboardMarkup:
     buttons = []
     free_slots = [(time_str, status) for time_str, status in slots.items() if status == "free"]
@@ -94,7 +91,7 @@ def time_slots_kb(
     for i in range(0, len(free_slots), 4):
         row = []
         for time_str, status in free_slots[i:i+4]:
-            row.append(icon_button(text=time_str, callback_data=f"time:{time_str}"))
+            row.append(icon_button(text=time_str, callback_data=f"{prefix}{time_str}"))
         buttons.append(row)
     buttons.append([icon_button(text="Назад", callback_data=back)])
     return InlineKeyboardMarkup(inline_keyboard=buttons)

@@ -51,7 +51,7 @@ def normalize_contact_phone(value):
 
 def demo_time_slots_kb(slots, back="db_back:date"):
     return keyboards.time_slots_kb(
-        slots, back=back, allow_waitlist=False, cancel="demo_booking_cancel"
+        slots, back=back, allow_waitlist=False, cancel="demo_booking_cancel", prefix="db_time:"
     )
 
 
@@ -88,10 +88,10 @@ async def choose_service(c, state):
     await state.update_data(service=value, duration_minutes=config.get_service_duration(value)); await state.set_state(DemoBooking.date)
     dates = await booking_engine._get_next_dates()
     await state.update_data(eligible_dates=list(dates))
-    await c.message.edit_text("<b>Шаг 3 из 6 — выберите дату</b>", reply_markup=keyboards.dates_kb(dates, back="db_back:service"), parse_mode="HTML"); await c.answer()
+    await c.message.edit_text("<b>Шаг 3 из 6 — выберите дату</b>", reply_markup=keyboards.dates_kb(dates, back="db_back:service", prefix="db_date:"), parse_mode="HTML"); await c.answer()
 
 
-@router.callback_query(F.data.startswith("date:"), DemoBooking.date)
+@router.callback_query(F.data.startswith("db_date:"), DemoBooking.date)
 async def choose_date(c, state):
     value = c.data.split(":", 1)[1]
     try: selected = datetime.strptime(value, "%Y-%m-%d").date()
@@ -104,7 +104,7 @@ async def choose_date(c, state):
     await c.message.edit_text("<b>Шаг 4 из 6 — выберите время</b>", reply_markup=demo_time_slots_kb(slots), parse_mode="HTML"); await c.answer()
 
 
-@router.callback_query(F.data.startswith("time:"), DemoBooking.time)
+@router.callback_query(F.data.startswith("db_time:"), DemoBooking.time)
 async def choose_time(c, state):
     value = c.data.split(":", 1)[1]; data = await state.get_data(); key = resource(data)
     slots = await booking_engine._get_available_slots(data["date"], key, data.get("duration_minutes"))
@@ -254,7 +254,7 @@ async def back(c, state):
     if target != "details": await release(c.from_user.id, state)
     if target == "service": await state.set_state(DemoBooking.service); await c.message.edit_text("<b>Шаг 2 из 6 — выберите услугу</b>", reply_markup=_kb(SERVICES, "db_service", "demo_book"), parse_mode="HTML")
     elif target == "date":
-        dates = await booking_engine._get_next_dates(); await state.update_data(eligible_dates=list(dates)); await state.set_state(DemoBooking.date); await c.message.edit_text("<b>Шаг 3 из 6 — выберите дату</b>", reply_markup=keyboards.dates_kb(dates, back="db_back:service"), parse_mode="HTML")
+        dates = await booking_engine._get_next_dates(); await state.update_data(eligible_dates=list(dates)); await state.set_state(DemoBooking.date); await c.message.edit_text("<b>Шаг 3 из 6 — выберите дату</b>", reply_markup=keyboards.dates_kb(dates, back="db_back:service", prefix="db_date:"), parse_mode="HTML")
     elif target == "details":
         await state.set_state(DemoBooking.phone)
         await c.message.answer("Поделитесь номером ещё раз. Остальные данные сохранены.", reply_markup=keyboards.phone_kb())

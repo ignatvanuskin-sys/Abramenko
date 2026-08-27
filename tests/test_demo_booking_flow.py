@@ -33,9 +33,9 @@ async def test_branch_service_date_time_contact_confirm(monkeypatch):
     with patch.object(flow.booking_engine, "_get_next_dates", AsyncMock(return_value=["2099-01-02"])):
         await flow.choose_service(make_callback("db_service:0"), state)
     with patch.object(flow.booking_engine, "_get_available_slots", AsyncMock(return_value={"12:00": "free"})):
-        await flow.choose_date(make_callback("date:2099-01-02"), state)
+        await flow.choose_date(make_callback("db_date:2099-01-02"), state)
         with patch.object(flow.storage, "create_slot_lock", AsyncMock(return_value=True)):
-            await flow.choose_time(make_callback("time:12:00", user_id=42), state)
+            await flow.choose_time(make_callback("db_time:12:00", user_id=42), state)
     await flow.name(make_message("Анна"), state); await flow.phone(contact_message(user_id=42), state)
     assert data["branch"] == flow.BRANCHES[0] and data["master"] == "Любой мастер"
     assert data["date"] == "2099-01-02" and data["time"] == "12:00"
@@ -59,7 +59,7 @@ async def test_coloring_branch_and_photo_buttons():
 async def test_slot_race_and_branch_resource_isolation():
     data = {"branch": flow.BRANCHES[0], "date": "2099-01-02", "duration_minutes": 30}; state = live_state(data)
     with patch.object(flow.booking_engine, "_get_available_slots", AsyncMock(return_value={"12:00": "free"})), patch.object(flow.storage, "create_slot_lock", AsyncMock(return_value=False)):
-        callback = make_callback("time:12:00")
+        callback = make_callback("db_time:12:00")
         await flow.choose_time(callback, state)
         assert callback.answer.await_args.kwargs["show_alert"] is True
     assert flow.resource({"branch": flow.BRANCHES[0]}) != flow.resource({"branch": flow.BRANCHES[1]})
@@ -76,7 +76,7 @@ async def test_cancel_and_back_release_lock():
 @pytest.mark.asyncio
 async def test_empty_schedule_renders_no_slots_button():
     data = {"branch": flow.BRANCHES[0], "duration_minutes": 30, "eligible_dates": ["2099-01-02"]}; state = live_state(data)
-    callback = make_callback("date:2099-01-02")
+    callback = make_callback("db_date:2099-01-02")
     with patch.object(flow.booking_engine, "_get_available_slots", AsyncMock(return_value={})):
         await flow.choose_date(callback, state)
     markup = callback.message.edit_text.await_args.kwargs["reply_markup"]
