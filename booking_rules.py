@@ -27,9 +27,22 @@ def normalize_master_key(master_key: str | None = None) -> str:
 
 
 def explicit_master_key(master: str | None) -> str:
-    """Use an explicit resource key when supplied; preserve legacy calls."""
-    if master and "|" in master:
-        return normalize_master_key(master)
+    """Derive an isolated persistence resource key from the selected master.
+
+    Older records without a master continue using MASTER_KEY; every explicit
+    master now gets its own key so two branches cannot share slot occupancy.
+    """
+    if master and str(master).strip():
+        master_name = str(master).strip()
+        if "|" in master_name:
+            return normalize_master_key(master_name)
+        try:
+            from studio_data import MASTERS
+            for item in MASTERS:
+                if item[0] == master_name:
+                    return normalize_master_key(f"branch:{item[2]}")
+        except (ImportError, IndexError, TypeError):
+            pass
     return normalize_master_key()
 
 

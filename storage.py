@@ -167,6 +167,19 @@ async def _migrate_slot_lock_owner_columns(conn) -> None:
     await _add_column_if_missing(conn, "slot_locks", "owner_token", "owner_token TEXT DEFAULT ''")
 
 
+async def _migrate_master_prices(conn) -> None:
+    """Create the optional per-master price override table idempotently."""
+    await conn.execute("""
+        CREATE TABLE IF NOT EXISTS master_service_prices (
+            master TEXT NOT NULL,
+            service TEXT NOT NULL,
+            price INTEGER NOT NULL,
+            PRIMARY KEY (master, service)
+        )
+    """)
+    await conn.commit()
+
+
 async def _ensure_waitlist_unique_index(conn) -> None:
     await conn.execute(
         "UPDATE waitlist SET status='duplicate' WHERE id IN ("
@@ -447,6 +460,7 @@ async def _init_pg() -> None:
         await _migrate_duration_columns(conn)
         await _migrate_master_key_columns(conn)
         await _migrate_slot_lock_owner_columns(conn)
+        await _migrate_master_prices(conn)
         await _ensure_waitlist_unique_index(conn)
         await _backfill_booking_slots(conn)
 
@@ -626,6 +640,7 @@ async def _init_sqlite() -> None:
         await _migrate_duration_columns(conn)
         await _migrate_master_key_columns(conn)
         await _migrate_slot_lock_owner_columns(conn)
+        await _migrate_master_prices(conn)
         await _ensure_waitlist_unique_index(conn)
         await _backfill_booking_slots(conn)
 
@@ -837,7 +852,7 @@ async def save_booking(
         booking.get("duration_minutes") or config.get_service_duration(booking.get("service", ""))
     )
     requested_slots = slot_times_for_range(booking["time"], duration_minutes)
-    master_key = normalize_master_key(booking.get("master_key"))
+    master_key = explicit_master_key(booking.get("master_key") or booking.get("master"))
     try:
         async with _db.acquire() as conn:
             async with conn.transaction():
@@ -1822,6 +1837,30 @@ async def get_locked_slots(date: str, master: str) -> set[str]:
     except Exception as e:
         logger.warning(f"get_locked_slots failed: {e}")
         return set()
+
+
+async def get_master_service_price(master: str, service: str) -> int | None:
+    """Return a validated per-master override, or None for the catalog price."""
+    async with _db.acquire() as conn:
+        value = await conn.fetchval(
+            "SELECT price FROM master_service_prices WHERE master=? AND service=?",
+            master,
+            service,
+        )
+    return int(value) if value is not None and int(value) >= 0 else None
+
+
+async def set_master_service_price(master: str, service: str, price: int) -> None:
+    """Create or update a per-master service price."""
+    price = int(price)
+    if price < 0:
+        raise ValueError("price must be non-negative")
+    async with _db.acquire() as conn:
+        await conn.upsert(
+            "master_service_prices",
+            ["master", "service"],
+            {"master": master, "service": service, "price": price},
+        )
 
 
 async def get_effective_price(master: str, service: str) -> int:

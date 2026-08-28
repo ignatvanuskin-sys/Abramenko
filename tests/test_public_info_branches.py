@@ -4,17 +4,18 @@ from unittest.mock import AsyncMock
 import pytest
 
 import handlers.info as info
+import handlers.booking as booking
 import keyboards
 from studio_data import BRANCHES, MASTERS
 
 
-def test_main_menu_exposes_booking_information_and_branches_only():
+def test_main_menu_exposes_requested_public_actions_only():
     keyboard = keyboards.main_menu_kb()
     callbacks = [button.callback_data for row in keyboard.inline_keyboard for button in row]
     labels = [button.text for row in keyboard.inline_keyboard for button in row]
 
-    assert callbacks == ["book", "info", "branches"]
-    assert labels == ["Записаться", "Информация", "Филиалы"]
+    assert callbacks == ["book", "prices", "my_bookings", "info"]
+    assert labels == ["Записаться", "Услуги и цены", "Мои записи", "Информация"]
 
 
 def test_branches_keyboard_contains_every_branch_and_back_button():
@@ -23,6 +24,24 @@ def test_branches_keyboard_contains_every_branch_and_back_button():
 
     assert callbacks[:-1] == [f"branch:{i}" for i in range(len(BRANCHES))]
     assert callbacks[-1] == "main_menu"
+
+
+@pytest.mark.asyncio
+async def test_booking_branch_selection_filters_specialists(monkeypatch):
+    edit = AsyncMock()
+    monkeypatch.setattr(booking, "_safe_edit", edit)
+    callback = SimpleNamespace(message=object(), answer=AsyncMock(), data="book_branch:1")
+    state = AsyncMock()
+
+    await booking.cb_choose_branch(callback, state)
+
+    state.update_data.assert_awaited_once_with(branch_index=1)
+    state.set_state.assert_awaited_once_with(booking.BookingStates.choose_master)
+    keyboard = edit.await_args.kwargs["reply_markup"]
+    labels = [button.text for row in keyboard.inline_keyboard for button in row]
+    assert "Елена" in labels and "Ольга" in labels
+    assert "Алиса" not in labels and "Диана" not in labels
+    callback.answer.assert_awaited_once()
 
 
 @pytest.mark.asyncio

@@ -19,15 +19,15 @@ router = Router()
 
 @router.callback_query(F.data == "info")
 async def cb_info(callback: CallbackQuery):
-    """Show the studio overview; no booking or lead actions are exposed."""
+    """Show the studio overview and nested branch/contact navigation."""
     text = (
         "<b>Abramenko Studio</b>\n\n"
         "Мы создаём стрижки и окрашивания с индивидуальным подбором техники.\n\n"
         "<b>График работы:</b> 10:00–20:00\n"
         f"<b>Телефон:</b> {html_lib.escape(config.SALON_PHONE)}\n\n"
-        "Выберите раздел «Филиалы», чтобы посмотреть адреса и специалистов."
+        "Откройте раздел «Филиалы», чтобы посмотреть адреса и специалистов."
     )
-    await edit_with_retry(callback.message, text, reply_markup=keyboards.back_to_main_kb(), parse_mode="HTML")
+    await edit_with_retry(callback.message, text, reply_markup=keyboards.info_kb(), parse_mode="HTML")
     await callback.answer()
 
 

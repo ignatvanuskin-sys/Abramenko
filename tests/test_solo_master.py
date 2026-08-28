@@ -16,12 +16,14 @@ class TestMainMenuKeyboard:
     def test_main_menu_has_expected_buttons(self):
         kb = keyboards.main_menu_kb()
         texts = " ".join(b.text for row in kb.inline_keyboard for b in row)
-        assert texts == "Записаться Информация Филиалы"
-        # Only booking, information, and branches remain in the public menu.
+        assert texts == "Записаться Услуги и цены Мои записи Информация"
+        # Only the requested public actions remain in the main menu.
         assert "Записаться" in texts
-        assert "Мои записи" not in texts
+        assert "Услуги и цены" in texts
+        assert "Мои записи" in texts
+        assert "Информация" in texts
         assert "Мастера" not in texts
-        assert "Услуги и цены" not in texts
+        assert "Филиалы" not in texts
         assert "О нас" not in texts
         # Removed / unneeded entries must not appear in the client menu
         assert "Общая информация" not in texts
@@ -139,7 +141,7 @@ class TestBookingFlowWithoutMasterSelection:
              patch("handlers.booking.config.MAX_BOOKING_ATTEMPTS", 10):
             await cb_book(cb, state)
 
-        # The source flow starts with explicit master selection.
+        # The restored flow starts with explicit branch selection.
         state.set_state.assert_called()
         state.update_data.assert_not_called()
-        assert cb.message.edit_text.await_args.args[0] == messages.CHOOSE_MASTER
+        assert cb.message.edit_text.await_args.args[0] == messages.CHOOSE_BRANCH

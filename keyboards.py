@@ -21,18 +21,36 @@ def _safe_cb(prefix: str, value: str, max_bytes: int = 62) -> str:
 
 
 def main_menu_kb() -> InlineKeyboardMarkup:
-    """Public menu: booking plus general information and branch navigation."""
+    """Public menu with booking, catalog, personal bookings and information."""
     return InlineKeyboardMarkup(inline_keyboard=[
         [icon_button("Записаться", "calendar", callback_data="book")],
+        [icon_button("Услуги и цены", "money", callback_data="prices"),
+         icon_button("Мои записи", "file", callback_data="my_bookings")],
         [icon_button("Информация", "info", callback_data="info")],
-        [icon_button("Филиалы", "location", callback_data="branches")],
     ])
 
 
-def masters_kb() -> InlineKeyboardMarkup:
-    """Select a master before choosing a service."""
-    masters = list(config.MASTERS.keys()) if isinstance(config.MASTERS, dict) else [item[0] for item in config.MASTERS]
-    rows = [[icon_button(name, "profile", callback_data=f"master:{i}")] for i, name in enumerate(masters)]
+def info_kb() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [icon_button("Филиалы", "location", callback_data="branches")],
+        [icon_button("Контакты", "phone", callback_data="contacts")],
+        [icon_button("Назад в меню", callback_data="main_menu")],
+    ])
+
+
+def booking_branches_kb(branches: list[str]) -> InlineKeyboardMarkup:
+    rows = [[icon_button(name, "location", callback_data=f"book_branch:{i}")] for i, name in enumerate(branches)]
+    rows.append([icon_button("Назад в меню", callback_data="main_menu")])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def masters_kb(branch_index: int | None = None) -> InlineKeyboardMarkup:
+    """Select a master belonging to the previously selected branch."""
+    if isinstance(config.MASTERS, dict):
+        masters = [(i, name) for i, name in enumerate(config.MASTERS)]
+    else:
+        masters = [(i, item[0]) for i, item in enumerate(config.MASTERS) if branch_index is None or item[2] == branch_index]
+    rows = [[icon_button(name, "profile", callback_data=f"master:{global_index}")] for global_index, name in masters]
     rows.append([icon_button("Назад в меню", callback_data="main_menu")])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 

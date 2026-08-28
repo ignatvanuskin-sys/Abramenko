@@ -105,7 +105,7 @@ def _register_dispatcher(dp: Dispatcher, bot: Bot) -> None:
     dp.include_router(booking_router)
     dp.include_router(info_router)
     # Admin routes remain available to configured administrators; public users
-    # see only information and branch navigation.
+    # receive booking, catalog, personal bookings, and information navigation.
     dp.include_router(admin_router)
 
     from aiogram import Router as _FBRouter

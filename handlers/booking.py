@@ -15,6 +15,7 @@ import scheduler
 import storage
 from emoji_config import E, P
 from handlers.start import ContactStates
+from studio_data import BRANCHES
 from tz_utils import get_now
 from utils import edit_with_retry, notify_admins  # noqa: F401  (kept: patched in tests)
 
@@ -152,6 +153,7 @@ async def _apply_discounts(telegram_id: int, base_price: int) -> tuple[int, str]
 
 
 class BookingStates(StatesGroup):
+    choose_branch = State()
     choose_master = State()
     choose_service = State()
     choose_date = State()
@@ -305,8 +307,32 @@ async def cb_book(callback: CallbackQuery, state: FSMContext):
         await callback.answer()
         return
 
+    await state.set_state(BookingStates.choose_branch)
+    await _safe_edit(
+        callback.message,
+        messages.CHOOSE_BRANCH,
+        reply_markup=keyboards.booking_branches_kb(BRANCHES),
+        parse_mode="HTML",
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("book_branch:"), BookingStates.choose_branch)
+async def cb_choose_branch(callback: CallbackQuery, state: FSMContext):
+    try:
+        branch_index = int(callback.data.split(":", 1)[1])
+        BRANCHES[branch_index]
+    except (ValueError, IndexError):
+        await callback.answer(f"{P.CROSS} Филиал не найден", show_alert=True)
+        return
+    await state.update_data(branch_index=branch_index)
     await state.set_state(BookingStates.choose_master)
-    await _safe_edit(callback.message, messages.CHOOSE_MASTER, reply_markup=keyboards.masters_kb(), parse_mode="HTML")
+    await _safe_edit(
+        callback.message,
+        messages.CHOOSE_MASTER,
+        reply_markup=keyboards.masters_kb(branch_index=branch_index),
+        parse_mode="HTML",
+    )
     await callback.answer()
 
 
@@ -327,6 +353,14 @@ async def cb_choose_master(callback: CallbackQuery, state: FSMContext):
             master_name = master_list[idx]
     else:
         master_name = master_key
+
+    state_data = await state.get_data()
+    branch_index = state_data.get("branch_index")
+    if branch_index is not None and not isinstance(config.MASTERS, dict):
+        branch_master = next((item for item in config.MASTERS if item[0] == master_name), None)
+        if not branch_master or branch_master[2] != branch_index:
+            await callback.answer(f"{P.CROSS} Этот мастер работает в другом филиале", show_alert=True)
+            return
 
     if isinstance(config.MASTERS, dict):
         master_info = config.MASTERS.get(master_name)
