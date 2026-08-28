@@ -16,13 +16,15 @@ import keyboards
 from config import BOT_TOKEN, load_config_from_db
 from emoji_config import E
 from handlers.admin import router as admin_router
-from handlers.booking import router as booking_router
 from handlers.info import router as info_router
 from handlers.start import router as start_router
-from handlers.demo import router as demo_router
-from handlers.demo_booking import router as demo_booking_router
 from middleware import AdminCheckMiddleware, RateLimitMiddleware
-from monitoring import get_health_status, start_monitoring
+from monitoring import (
+    get_health_status,
+    initialize_persistent_monitoring,
+    shutdown_monitoring,
+    start_monitoring,
+)
 from scheduler import shutdown_scheduler, start_scheduler
 from storage import delete_old_scheduler_jobs, init_db
 
@@ -98,10 +100,9 @@ def _register_dispatcher(dp: Dispatcher, bot: Bot) -> None:
     dp.callback_query.middleware(AdminCheckMiddleware())
 
     dp.include_router(start_router)
-    dp.include_router(demo_booking_router)
-    dp.include_router(demo_router)
-    dp.include_router(booking_router)
     dp.include_router(info_router)
+    # Admin routes remain available to configured administrators; public users
+    # see only information and branch navigation.
     dp.include_router(admin_router)
 
     from aiogram import Router as _FBRouter
@@ -157,13 +158,6 @@ async def _set_bot_commands(bot: Bot) -> None:
 
     user_commands = [
         BotCommand(command="start", description="Главное меню"),
-        BotCommand(command="me", description="Мой профиль и записи"),
-        BotCommand(command="about", description="О мастере"),
-        BotCommand(command="contacts", description="Контакты"),
-        BotCommand(command="master", description="О мастере"),
-        BotCommand(command="waitlist", description="Мой лист ожидания"),
-        BotCommand(command="cancel", description="Отменить запись"),
-        BotCommand(command="help", description="Справка по командам"),
     ]
     await bot.set_my_commands(user_commands, scope=BotCommandScopeDefault())
 
@@ -181,9 +175,8 @@ async def _startup(bot: Bot) -> None:
     try:
         await _db_module.init_pool()
         await init_db()
-        from demo_repository import init_demo_repository
-        await init_demo_repository()
-        logger.info("Database initialized")
+        await initialize_persistent_monitoring()
+        logger.info("Database and persistent monitoring initialized")
     except Exception as e:
         logger.critical(f"Failed to initialize database: {e}", exc_info=True)
         # Database is required for truthful persist-first demo delivery.
@@ -255,6 +248,8 @@ async def _startup(bot: Bot) -> None:
 
 async def _shutdown(bot: Bot, dp: Dispatcher) -> None:
     shutdown_scheduler()
+    with suppress(Exception):
+        await shutdown_monitoring()
     with suppress(Exception):
         await dp.storage.close()
         await dp.storage.wait_closed()

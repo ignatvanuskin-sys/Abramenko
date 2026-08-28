@@ -1,10 +1,12 @@
 # screenpipe — AI that knows everything you've seen, said, or heard; https://screenpipe.com
+import asyncio
+import json
 import logging
 import time
-import json
 from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
+_persist_tasks: set[asyncio.Task] = set()
 
 _start_time = None
 _COUNTERS = {
@@ -31,8 +33,38 @@ _COUNTERS = {
 }
 
 
+def _track_persist_task(task: asyncio.Task) -> None:
+    _persist_tasks.add(task)
+    task.add_done_callback(_persist_tasks.discard)
+    task.add_done_callback(_log_persist_failure)
+
+
+def _log_persist_failure(task: asyncio.Task) -> None:
+    if not task.cancelled() and task.exception():
+        logger.warning("Persistent monitoring write failed: %s", task.exception())
+
+
 def increment_counter(name: str, amount: int = 1) -> None:
     _COUNTERS[name] = _COUNTERS.get(name, 0) + amount
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        return
+    from metrics_repository import increment_counter as persist_counter
+    _track_persist_task(loop.create_task(persist_counter(name, amount)))
+
+
+async def initialize_persistent_monitoring() -> None:
+    """Create observability tables and restore counters after a restart."""
+    from metrics_repository import ensure_schema, load_counters
+    await ensure_schema()
+    _COUNTERS.update(await load_counters())
+    logger.info("Persistent monitoring initialized with %d counters", len(_COUNTERS))
+
+
+async def shutdown_monitoring() -> None:
+    if _persist_tasks:
+        await asyncio.gather(*list(_persist_tasks), return_exceptions=True)
 
 
 def get_metrics() -> dict:
@@ -58,7 +90,14 @@ def get_metrics_snapshot() -> dict:
 
 def log_event(logger_obj, event: str, **fields) -> None:
     payload = {"event": event, **fields}
-    logger_obj.info(json.dumps(payload, ensure_ascii=False, sort_keys=True))
+    encoded = json.dumps(payload, ensure_ascii=False, sort_keys=True, default=str)
+    logger_obj.info(encoded)
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        return
+    from metrics_repository import record_event
+    _track_persist_task(loop.create_task(record_event(event, encoded)))
 
 
 def log_payment_placeholder(action: str = "not_implemented", **fields) -> None:
@@ -115,20 +154,21 @@ async def check_storage_health() -> bool:
     """HIGH-05 FIX: Actually check the FSM storage (FileStorage or Redis)."""
     try:
         import os
+        import config as _cfg
         redis_url = os.getenv("REDIS_URL", "")
         if redis_url:
             # M-3 FIX: guard aioredis import in case package is not installed
             try:
                 import aioredis
             except ImportError:
-                logger.warning("aioredis not installed: skipping Redis health check")
-                return True
+                required = bool(getattr(_cfg, "REQUIRE_REDIS_FSM", False))
+                logger.error("Redis URL is configured but aioredis is unavailable")
+                return False if required else True
             r = await aioredis.from_url(redis_url, socket_connect_timeout=3)
             await r.ping()
             await r.close()
         else:
             # Test FileStorage JSON file is readable/writable
-            import config as _cfg
             from pathlib import Path
             fsm_file = Path(_cfg.DB_PATH).parent / "fsm_state.json"
             parent = fsm_file.parent

@@ -8,12 +8,55 @@ import messages
 import keyboards
 import config
 import storage
+from studio_data import BRANCHES, MASTERS
 from utils import edit_with_retry
 from emoji_config import E, icon_button
 
 logger = logging.getLogger(__name__)
 
 router = Router()
+
+
+@router.callback_query(F.data == "info")
+async def cb_info(callback: CallbackQuery):
+    """Show the studio overview; no booking or lead actions are exposed."""
+    text = (
+        "<b>Abramenko Studio</b>\n\n"
+        "Мы создаём стрижки и окрашивания с индивидуальным подбором техники.\n\n"
+        "<b>График работы:</b> 10:00–20:00\n"
+        f"<b>Телефон:</b> {html_lib.escape(config.SALON_PHONE)}\n\n"
+        "Выберите раздел «Филиалы», чтобы посмотреть адреса и специалистов."
+    )
+    await edit_with_retry(callback.message, text, reply_markup=keyboards.back_to_main_kb(), parse_mode="HTML")
+    await callback.answer()
+
+
+@router.callback_query(F.data == "branches")
+async def cb_branches(callback: CallbackQuery):
+    text = "<b>Филиалы Abramenko Studio</b>\n\nВыберите филиал:"
+    await edit_with_retry(callback.message, text, reply_markup=keyboards.branches_kb(BRANCHES), parse_mode="HTML")
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("branch:"))
+async def cb_branch(callback: CallbackQuery):
+    try:
+        index = int(callback.data.split(":", 1)[1])
+        branch = BRANCHES[index]
+    except (ValueError, IndexError):
+        await callback.answer("Филиал не найден", show_alert=True)
+        return
+
+    specialists = [name for name, _description, branch_index in MASTERS if branch_index == index]
+    staff = ", ".join(specialists) if specialists else "Информация уточняется"
+    text = (
+        f"<b>{html_lib.escape(branch)}</b>\n\n"
+        f"<b>Специалисты:</b> {html_lib.escape(staff)}\n"
+        f"<b>График работы:</b> 10:00–20:00\n"
+        f"<b>Телефон:</b> {html_lib.escape(config.SALON_PHONE)}"
+    )
+    await edit_with_retry(callback.message, text, reply_markup=keyboards.branches_kb(BRANCHES), parse_mode="HTML")
+    await callback.answer()
 
 
 @router.callback_query(F.data == "contacts")

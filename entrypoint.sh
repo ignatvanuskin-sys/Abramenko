@@ -8,10 +8,10 @@ set -e
 # ─────────────────────────────────────────────────────────────────────────────
 
 mkdir -p /app/data /app/backups /app/logs
-# H-1 FIX: 755 is sufficient — owner (root) can write, others can only read/exec
-chmod 755 /app/data /app/backups /app/logs
+# Mounted volumes may be recreated as root:root by the platform. Fix ownership
+# while still privileged, then run the application as the unprivileged bot user.
+chown -R bot:bot /app/data /app/backups /app/logs
+chmod 750 /app/data /app/backups /app/logs
 
-echo "[entrypoint] Permissions fixed:"
-ls -la /app/ | grep -E "data|backups|logs"
-
-exec "$@"
+echo "[entrypoint] Runtime directories prepared"
+exec gosu bot "$@"

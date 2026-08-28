@@ -7,8 +7,39 @@ import os
 import logging
 from pathlib import Path
 from tz_utils import get_now
+from booking_rules import (
+    booking_range_fits_working_day,
+    booking_time_is_far_enough as _booking_time_is_far_enough,
+    explicit_master_key,
+    duration_between as _duration_between,
+    normalize_duration_minutes,
+    normalize_master_key,
+    minutes_to_time,
+    period_overlaps as _period_overlaps,
+    slot_times_for_range,
+    time_ranges_overlap,
+    time_to_minutes,
+    working_time_slots_for_date,
+)
+from admin_repository import get_admin_audit_log, log_admin_action
+from settings_repository import get_all_settings, get_settings, save_settings
+from services_repository import get_all_service_durations, get_all_services, remove_service, save_service
+from statistics_repository import (
+    get_active_bookings_count,
+    get_bookings_summary,
+    get_service_stats,
+    get_stats,
+    get_stats_by_day,
+    get_stats_by_service,
+    invalidate_stats_cache as _invalidate_stats_cache,
+)
 
 logger = logging.getLogger(__name__)
+
+
+# Keep the historical storage.get_now monkeypatch seam used by tests and tools.
+def booking_time_is_far_enough(date_str: str, start_time: str) -> bool:
+    return _booking_time_is_far_enough(date_str, start_time, now_provider=get_now)
 
 
 class _BookingRejected(Exception):
@@ -33,110 +64,6 @@ def _log_event(event: str, **fields) -> None:
         log_event(logger, event, **fields)
     except Exception:
         pass
-
-
-def normalize_duration_minutes(duration_minutes: int | None) -> int:
-    try:
-        duration = int(duration_minutes or config.DEFAULT_SERVICE_DURATION_MINUTES)
-    except (TypeError, ValueError):
-        duration = config.DEFAULT_SERVICE_DURATION_MINUTES
-    return duration if duration > 0 else config.DEFAULT_SERVICE_DURATION_MINUTES
-
-
-def normalize_master_key(master_key: str | None = None) -> str:
-    value = (master_key or getattr(config, "MASTER_KEY", "default") or "default").strip()
-    return value or "default"
-
-
-def explicit_master_key(master: str | None) -> str:
-    """Use an explicit resource key when supplied; preserve legacy display-name calls."""
-    if master and "|" in master:
-        return normalize_master_key(master)
-    return normalize_master_key()
-
-
-def time_to_minutes(time_str: str) -> int:
-    hours, minutes = time_str.split(":", 1)
-    return int(hours) * 60 + int(minutes)
-
-
-def minutes_to_time(total_minutes: int) -> str:
-    return f"{total_minutes // 60:02d}:{total_minutes % 60:02d}"
-
-
-def slot_times_for_range(start_time: str, duration_minutes: int | None) -> list[str]:
-    duration = normalize_duration_minutes(duration_minutes)
-    start = time_to_minutes(start_time)
-    count = (duration + config.SLOT_STEP_MINUTES - 1) // config.SLOT_STEP_MINUTES
-    return [minutes_to_time(start + i * config.SLOT_STEP_MINUTES) for i in range(count)]
-
-
-_working_time_cache: dict[str, list[str]] = {}
-
-def working_time_slots_for_date(date_str: str) -> list[str]:
-    try:
-        d = datetime.strptime(date_str, "%Y-%m-%d")
-    except ValueError:
-        return []
-    day_key = d.strftime("%A").lower()
-    cached = _working_time_cache.get(day_key)
-    if cached is not None:
-        return cached
-    day_names = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
-    hours = config.WORKING_HOURS.get(day_names[d.weekday()])
-    if not hours or len(hours) != 2:
-        return []
-    start_h, end_h = int(hours[0]), int(hours[1])
-    if start_h >= end_h:
-        return []
-    slots = []
-    for h in range(start_h, end_h):
-        slots.append(f"{h:02d}:00")
-        slots.append(f"{h:02d}:30")
-    _working_time_cache[day_key] = slots
-    return slots
-
-
-def booking_range_fits_working_day(date_str: str, start_time: str, duration_minutes: int | None) -> bool:
-    available_slots = set(working_time_slots_for_date(date_str))
-    required_slots = slot_times_for_range(start_time, duration_minutes)
-    return bool(required_slots) and all(slot in available_slots for slot in required_slots)
-
-
-def booking_time_is_far_enough(date_str: str, start_time: str) -> bool:
-    try:
-        selected_date = datetime.strptime(date_str, "%Y-%m-%d").date()
-        h, m = [int(part) for part in start_time.split(":", 1)]
-    except Exception:
-        return False
-    now = get_now(config.TIMEZONE)
-    if selected_date < now.date():
-        return False
-    if selected_date > now.date():
-        return True
-    slot_dt = now.replace(hour=h, minute=m, second=0, microsecond=0)
-    return slot_dt > now + timedelta(minutes=config.MIN_BOOKING_ADVANCE_MINUTES)
-
-
-def time_ranges_overlap(start_a: str, duration_a: int | None, start_b: str, duration_b: int | None) -> bool:
-    a1 = time_to_minutes(start_a)
-    a2 = a1 + normalize_duration_minutes(duration_a)
-    b1 = time_to_minutes(start_b)
-    b2 = b1 + normalize_duration_minutes(duration_b)
-    return a1 < b2 and b1 < a2
-
-
-def _duration_between(start_time: str, end_time: str) -> int:
-    return max(config.SLOT_STEP_MINUTES, time_to_minutes(end_time) - time_to_minutes(start_time))
-
-
-def _period_overlaps(start_time: str, duration_minutes: int | None, period: dict) -> bool:
-    return time_ranges_overlap(
-        start_time,
-        duration_minutes,
-        period["start_time"],
-        _duration_between(period["start_time"], period["end_time"]),
-    )
 
 
 def _is_unique_constraint_error(exc: Exception) -> bool:
@@ -1016,6 +943,7 @@ async def save_booking(
                             service=booking["service"],
                             price=final_price,
                         )
+                        _invalidate_stats_cache()
                         return booking_id
                     except Exception as e:
                         if _is_unique_constraint_error(e) and _is_primary_key_conflict(e) and attempt < 2:
@@ -1077,6 +1005,7 @@ async def cancel_booking(booking_id: str, telegram_id: int = None) -> dict | Non
             if row:
                 _increment_metric("bookings_cancelled")
                 _log_event("booking_cancelled", booking_id=booking_id, source="client")
+                _invalidate_stats_cache()
             return row
 
 
@@ -1090,6 +1019,7 @@ async def complete_booking(booking_id: str) -> dict | None:
                 return None
             await conn.execute("UPDATE bookings SET status='completed' WHERE id=?", booking_id)
             await conn.execute("DELETE FROM booking_slots WHERE booking_id=?", booking_id)
+            _invalidate_stats_cache()
             return row
 
 
@@ -1105,6 +1035,7 @@ async def admin_cancel_booking(booking_id: str) -> dict | None:
             await conn.execute("DELETE FROM booking_slots WHERE booking_id=?", booking_id)
             _increment_metric("bookings_cancelled")
             _log_event("booking_cancelled", booking_id=booking_id, source="admin")
+            _invalidate_stats_cache()
             for lock_time in slot_times_for_range(row["time"], row.get("duration_minutes")):
                 await conn.execute(
                     "DELETE FROM slot_locks WHERE date=? AND time=? AND master_key=?",
@@ -1123,6 +1054,7 @@ async def admin_complete_booking(booking_id: str) -> dict | None:
                 return None
             await conn.execute("UPDATE bookings SET status='completed' WHERE id=?", booking_id)
             await conn.execute("DELETE FROM booking_slots WHERE booking_id=?", booking_id)
+            _invalidate_stats_cache()
             return row
 
 
@@ -1407,7 +1339,7 @@ async def add_to_waitlist(
 ) -> bool:
     now = get_now(config.TIMEZONE).isoformat()
     duration = normalize_duration_minutes(duration_minutes or config.get_service_duration(service))
-    master_key = normalize_master_key()
+    master_key = explicit_master_key(master)
     try:
         async with _db.acquire() as conn:
             async with conn.transaction():
@@ -1439,13 +1371,13 @@ async def get_waitlist_for_slot(date: str, time: str, master: str) -> list[dict]
     async with _db.acquire() as conn:
         return await conn.fetch(
             "SELECT * FROM waitlist WHERE date=? AND time=? AND master_key=? AND status='waiting' ORDER BY id",
-            date, time, normalize_master_key(),
+            date, time, explicit_master_key(master),
         )
 
 
-async def get_waitlist_for_open_period(date: str, master: str, start_time: str, duration_minutes: int | None = None) -> list[dict]:
+async def get_waitlist_for_open_period(date: str, master: str, start_time: str, duration_minutes: int | None = None):
     freed_duration = normalize_duration_minutes(duration_minutes)
-    master_key = normalize_master_key()
+    master_key = explicit_master_key(master)
     async with _db.acquire() as conn:
         rows = await conn.fetch(
             "SELECT * FROM waitlist WHERE date=? AND master_key=? AND status='waiting' ORDER BY id",
@@ -1699,215 +1631,6 @@ async def save_review(booking_id: str, telegram_id: int, rating: int, comment: s
 async def get_reviews() -> list[dict]:
     async with _db.acquire() as conn:
         return await conn.fetch("SELECT * FROM reviews ORDER BY created_at DESC")
-
-
-# ======================================================================
-# Statistics
-# ======================================================================
-
-_stats_cache: dict | None = None
-_stats_cache_time: float = 0
-_STATS_CACHE_TTL = 15  # seconds
-
-async def get_stats() -> dict:
-    global _stats_cache, _stats_cache_time
-    import time as _t
-    now = _t.time()
-    if _stats_cache is not None and (now - _stats_cache_time) < _STATS_CACHE_TTL:
-        return _stats_cache
-    async with _db.acquire() as conn:
-        row = await conn.fetchrow(
-            "SELECT COUNT(*) as total, "
-            "COUNT(*) FILTER (WHERE status='active') as active, "
-            "COUNT(*) FILTER (WHERE status='cancelled') as cancelled, "
-            "COUNT(*) FILTER (WHERE status='completed') as completed, "
-            "COALESCE(SUM(price) FILTER (WHERE status='completed'), 0) as revenue "
-            "FROM bookings"
-        )
-        _stats_cache = {
-            "total": row["total"] or 0,
-            "active": row["active"] or 0,
-            "cancelled": row["cancelled"] or 0,
-            "completed": row["completed"] or 0,
-            "revenue": int(row["revenue"] or 0),
-        }
-        _stats_cache_time = now
-        return _stats_cache
-
-
-async def get_stats_by_day() -> list[dict]:
-    async with _db.acquire() as conn:
-        return await conn.fetch(
-            "SELECT date, COUNT(*) as count FROM bookings "
-            "WHERE status IN ('active', 'completed') GROUP BY date ORDER BY date"
-        )
-
-
-async def get_stats_by_service() -> list[dict]:
-    async with _db.acquire() as conn:
-        return await conn.fetch(
-            "SELECT service, COUNT(*) as count, SUM(price) as revenue "
-            "FROM bookings WHERE status IN ('active', 'completed') GROUP BY service"
-        )
-
-
-async def get_service_stats(service_name: str) -> dict:
-    async with _db.acquire() as conn:
-        row = await conn.fetchrow(
-            "SELECT COUNT(*) as total, "
-            "SUM(CASE WHEN status='active' THEN 1 ELSE 0 END) as active, "
-            "SUM(CASE WHEN status='completed' THEN 1 ELSE 0 END) as completed, "
-            "SUM(CASE WHEN status='completed' THEN price ELSE 0 END) as revenue "
-            "FROM bookings WHERE service=?",
-            service_name,
-        )
-        return {"total": row["total"] or 0, "active": row["active"] or 0,
-                "completed": row["completed"] or 0, "revenue": row["revenue"] or 0}
-
-
-async def get_active_bookings_count() -> int:
-    async with _db.acquire() as conn:
-        return (await conn.fetchval("SELECT COUNT(*) FROM bookings WHERE status='active'")) or 0
-
-
-async def get_bookings_summary(date_str: str) -> dict:
-    async with _db.acquire() as conn:
-        row = await conn.fetchrow(
-            "SELECT COUNT(*) as total, "
-            "COALESCE(SUM(CASE WHEN status='active' THEN 1 ELSE 0 END),0) as active, "
-            "COALESCE(SUM(CASE WHEN status='cancelled' THEN 1 ELSE 0 END),0) as cancelled, "
-            "COALESCE(SUM(CASE WHEN status='completed' THEN 1 ELSE 0 END),0) as completed, "
-            "COALESCE(SUM(CASE WHEN status='completed' THEN price ELSE 0 END),0) as revenue "
-            "FROM bookings WHERE date=?",
-            date_str,
-        )
-        return {"total": row["total"] or 0, "active": row["active"] or 0,
-                "cancelled": row["cancelled"] or 0, "completed": row["completed"] or 0,
-                "revenue": row["revenue"] or 0}
-
-
-# ======================================================================
-# Settings (key-value)
-# ======================================================================
-
-async def save_settings(key: str, value: str):
-    global _settings_cache
-    async with _db.acquire() as conn:
-        await conn.upsert("settings", ["key"], {"key": key, "value": value})
-    # MED-06: Invalidate cache immediately
-    _settings_cache = None
-
-
-async def get_settings(key: str) -> str | None:
-    async with _db.acquire() as conn:
-        return await conn.fetchval("SELECT value FROM settings WHERE key=?", key)
-
-
-# MED-06: Simple in-memory cache for config settings
-_settings_cache: dict | None = None
-_settings_cache_time: float = 0
-_SETTINGS_CACHE_TTL = 30  # seconds
-
-async def get_all_settings() -> dict:
-    global _settings_cache, _settings_cache_time
-    import time as _t
-    now = _t.time()
-    if _settings_cache is not None and (now - _settings_cache_time) < _SETTINGS_CACHE_TTL:
-        return _settings_cache
-    async with _db.acquire() as conn:
-        rows = await conn.fetch("SELECT key, value FROM settings")
-        _settings_cache = {r["key"]: r["value"] for r in rows}
-        _settings_cache_time = now
-        return _settings_cache
-
-
-# ======================================================================
-# Admin audit log
-# ======================================================================
-
-async def log_admin_action(
-    admin_id: int,
-    action: str,
-    entity_type: str = "",
-    entity_id: str = "",
-    old_value: str = "",
-    new_value: str = "",
-) -> None:
-    async with _db.acquire() as conn:
-        await conn.execute(
-            "INSERT INTO admin_audit_log "
-            "(admin_id, action, entity_type, entity_id, old_value, new_value, created_at) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?)",
-            admin_id,
-            action,
-            entity_type,
-            str(entity_id or ""),
-            old_value or "",
-            new_value or "",
-            get_now(config.TIMEZONE).isoformat(),
-        )
-        await conn.commit()
-
-
-async def get_admin_audit_log(limit: int = 50, offset: int = 0) -> list[dict]:
-    async with _db.acquire() as conn:
-        return await conn.fetch(
-            "SELECT * FROM admin_audit_log ORDER BY created_at DESC LIMIT ? OFFSET ?",
-            limit,
-            offset,
-        )
-
-
-# ======================================================================
-# Services (global)
-# ======================================================================
-
-async def save_service(name: str, price: int, duration_minutes: int | None = None):
-    global _services_cache
-    duration = normalize_duration_minutes(duration_minutes or config.get_service_duration(name))
-    async with _db.acquire() as conn:
-        await conn.upsert("services", ["name"], {"name": name, "price": price, "duration_minutes": duration})
-    # MED-06: Invalidate cache immediately (only after successful write)
-    _services_cache = None
-
-
-async def remove_service(name: str):
-    global _services_cache
-    async with _db.acquire() as conn:
-        await conn.execute("DELETE FROM services WHERE name=?", name)
-        await conn.commit()
-    # MED-06: Invalidate cache immediately
-    _services_cache = None
-
-
-# MED-06: Simple in-memory cache for services
-_services_cache: dict | None = None
-_services_cache_time: float = 0
-_SERVICES_CACHE_TTL = 30  # seconds
-
-async def get_all_services() -> dict:
-    global _services_cache, _services_cache_time
-    import time as _t
-    now = _t.time()
-    if _services_cache is not None and (now - _services_cache_time) < _SERVICES_CACHE_TTL:
-        return _services_cache
-    async with _db.acquire() as conn:
-        rows = await conn.fetch("SELECT name, price FROM services")
-        _services_cache = {r["name"]: r["price"] for r in rows}
-        _services_cache_time = now
-        return _services_cache
-
-
-async def get_all_service_durations() -> dict:
-    global _services_cache
-    import time as _t
-    now = _t.time()
-    if _services_cache is not None and (now - _services_cache_time) < _SERVICES_CACHE_TTL:
-        # We cache services with prices; return durations from same cache
-        pass
-    async with _db.acquire() as conn:
-        rows = await conn.fetch("SELECT name, duration_minutes FROM services")
-        return {r["name"]: normalize_duration_minutes(r.get("duration_minutes")) for r in rows}
 
 
 # ======================================================================

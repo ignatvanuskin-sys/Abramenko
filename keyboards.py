@@ -21,13 +21,19 @@ def _safe_cb(prefix: str, value: str, max_bytes: int = 62) -> str:
 
 
 def main_menu_kb() -> InlineKeyboardMarkup:
+    """Public menu: only general information and branch navigation."""
     return InlineKeyboardMarkup(inline_keyboard=[
-        [icon_button("Записаться", "calendar", callback_data="demo_book")],
-        [icon_button("Мои записи", "file", callback_data="my_bookings"),
-         icon_button("Мастера", "people", callback_data="demo_faq:masters")],
-        [icon_button("Услуги и цены", "money", callback_data="demo_faq:prices"),
-         icon_button("О нас", "info", callback_data="demo_faq:info")],
+        [icon_button("Информация", "info", callback_data="info")],
+        [icon_button("Филиалы", "location", callback_data="branches")],
     ])
+
+
+def branches_kb(branches: list[str]) -> InlineKeyboardMarkup:
+    """Keyboard for selecting a studio branch."""
+    rows = [[icon_button(name, "location", callback_data=f"branch:{i}")]
+            for i, name in enumerate(branches)]
+    rows.append([icon_button("Назад в меню", callback_data="main_menu")])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
 async def services_kb(back: str = "main_menu") -> InlineKeyboardMarkup:

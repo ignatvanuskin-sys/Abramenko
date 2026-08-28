@@ -115,8 +115,8 @@ POLLING_CONFLICT_RETRY_DELAY = _env_float("POLLING_CONFLICT_RETRY_DELAY", 5.0)
 REQUIRE_REDIS_FSM = _env_bool("REQUIRE_REDIS_FSM", APP_ENV in {"prod", "production"})
 
 # Основные плейсхолдеры бренда. Изменяйте здесь или через админ-панель бота.
-SALON_NAME = os.getenv("SALON_NAME", "Abramenko Studio")
-MASTER_NAME = "Администратор Abramenko Studio"
+SALON_NAME = os.getenv("SALON_NAME", "Abramenko Studio").strip() or "Abramenko Studio"
+MASTER_NAME = os.getenv("MASTER_NAME", "Администратор Abramenko Studio").strip() or "Администратор Abramenko Studio"
 MASTER_KEY = os.getenv("MASTER_KEY", "default").strip() or "default"
 MASTER_DESCRIPTION = "Информацию о специалистах уточнит администратор."
 MASTER_EXPERIENCE = "Точный опыт уточнит администратор"
@@ -133,11 +133,11 @@ MASTERS = [
 LOYALTY_VISIT_INTERVAL = _env_int("LOYALTY_VISIT_INTERVAL", 5, minimum=1)
 LOYALTY_DISCOUNT_PERCENT = _env_int("LOYALTY_DISCOUNT_PERCENT", 10, minimum=0)
 REFERRAL_BONUS = _env_int("REFERRAL_BONUS", 100, minimum=0)
-SALON_ADDRESS = "Точный адрес уточнит администратор"
-SALON_PHONE = "+7 707 486 5437"
-SALON_INSTAGRAM = ""
-SALON_TELEGRAM = ""
-SALON_WORKING_HOURS = "Ежедневно: 10:00–20:00"
+SALON_ADDRESS = os.getenv("SALON_ADDRESS", "Точный адрес уточнит администратор").strip()
+SALON_PHONE = os.getenv("SALON_PHONE", "+7 707 486 5437").strip()
+SALON_INSTAGRAM = os.getenv("SALON_INSTAGRAM", "").strip()
+SALON_TELEGRAM = os.getenv("SALON_TELEGRAM", "").strip()
+SALON_WORKING_HOURS = os.getenv("SALON_WORKING_HOURS", "Ежедневно: 10:00–20:00").strip()
 SALON_LOCATION_LAT = 0.0
 SALON_LOCATION_LON = 0.0
 
