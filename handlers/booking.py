@@ -540,9 +540,9 @@ async def cb_choose_time(callback: CallbackQuery, state: FSMContext):
     await state.update_data(time=time_str)
     await state.set_state(BookingStates.enter_name)
 
-    # UX-002 FIX: Step 5 — шаг с подсказкой имени
+    # UX-002 FIX: Step 6 — шаг с подсказкой имени
     data_so_far = await state.get_data()
-    text = f"{E.LIST} <b>Шаг 5 из 5 — Ваше имя</b>\n\n"
+    text = f"{E.LIST} <b>Шаг 6 из 6 — Ваше имя</b>\n\n"
     text += "Вы записываетесь:\n"
     text += (
         f"{E.SCISSORS} {html.escape(data_so_far.get('master', ''))} — {html.escape(data_so_far.get('service', ''))}\n"
@@ -598,13 +598,15 @@ async def cb_use_tg_name(callback: CallbackQuery, state: FSMContext):
         "branch": data.get("branch", ""),
         "service": data["service"],
         "price": final_price,
+        "bonus_spent": bonus_spent,
+        "discount_info": discount_info,
     }
 
     try:
         # HIGH-2 FIX: pass bonus_spent into save_booking so the deduction
         # happens inside the same DB transaction as the INSERT. If the
         # transaction rolls back, the user's balance stays intact.
-        booking_id = await storage.save_booking(booking, bonus_spent=bonus_spent)
+        booking_id = await storage.save_booking(booking)
     except Exception as e:
         logger.error(f"Failed to save booking: {e}")
         await callback.message.answer(messages.ERROR, reply_markup=keyboards.back_to_main_kb(), parse_mode="HTML")
@@ -733,15 +735,19 @@ async def handle_enter_name(message: Message, state: FSMContext):
         "telegram_id": telegram_id,
         "username": message.from_user.username or "",
         "master": data["master"],
+        "master_key": data.get("master_key", data["master"]),
+        "branch": data.get("branch", ""),
         "service": data["service"],
         "price": final_price,
+        "bonus_spent": bonus_spent,
+        "discount_info": discount_info,
     }
 
     try:
         # HIGH-2 FIX: pass bonus_spent into save_booking so the deduction
         # happens inside the same DB transaction as the INSERT. If the
         # transaction rolls back, the user's balance stays intact.
-        booking_id = await storage.save_booking(booking, bonus_spent=bonus_spent)
+        booking_id = await storage.save_booking(booking)
     except Exception as e:
         logger.error(f"Failed to save booking: {e}")
         await message.answer(messages.ERROR, reply_markup=keyboards.back_to_main_kb(), parse_mode="HTML")
@@ -892,7 +898,7 @@ async def cb_back_to_time(callback: CallbackQuery, state: FSMContext):
 @router.callback_query(F.data == "no_slots")
 async def cb_no_slots(callback: CallbackQuery):
     await callback.answer(
-        f"{E.EMPTY} Все слоты на эту дату заняты. Попробуйте выбрать другую дату или встать в лист ожидания.",
+        f"{P.EMPTY} Все слоты на эту дату заняты. Попробуйте выбрать другую дату или встать в лист ожидания.",
         show_alert=True,
     )
 
@@ -922,7 +928,7 @@ async def cb_go_to_waitlist(callback: CallbackQuery, state: FSMContext):
     for i in range(0, len(busy_times), 4):
         row = []
         for time_str in busy_times[i : i + 4]:
-            row.append(keyboards.icon_button(text=f"{E.CROSS} {time_str}", callback_data=f"waitlist:{time_str}"))
+            row.append(keyboards.icon_button(text=f"{P.CROSS} {time_str}", callback_data=f"waitlist:{time_str}"))
         buttons.append(row)
     buttons.append([keyboards.icon_button(text="Назад", callback_data="back_to_time")])
 

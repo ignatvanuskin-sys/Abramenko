@@ -16,20 +16,20 @@ class TestMainMenuKeyboard:
     def test_main_menu_has_expected_buttons(self):
         kb = keyboards.main_menu_kb()
         texts = " ".join(b.text for row in kb.inline_keyboard for b in row)
-        assert texts == "Записаться Услуги и цены Мои записи Информация"
+        assert texts == "Записаться Услуги и цены Мои записи Информация Мастера Портфолио"
         # Only the requested public actions remain in the main menu.
         assert "Записаться" in texts
         assert "Услуги и цены" in texts
         assert "Мои записи" in texts
         assert "Информация" in texts
-        assert "Мастера" not in texts
+        assert "Мастера" in texts
         assert "Филиалы" not in texts
         assert "О нас" not in texts
         # Removed / unneeded entries must not appear in the client menu
         assert "Общая информация" not in texts
         assert "О салоне" not in texts
         assert "Наши мастера" not in texts
-        assert "Портфолио" not in texts
+        assert "Портфолио" in texts
         assert "Контакты" not in texts
         assert "О студии" not in texts
         assert "Вакансии" not in texts

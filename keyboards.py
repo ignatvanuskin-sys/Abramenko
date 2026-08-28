@@ -27,6 +27,8 @@ def main_menu_kb() -> InlineKeyboardMarkup:
         [icon_button("Услуги и цены", "money", callback_data="prices"),
          icon_button("Мои записи", "file", callback_data="my_bookings")],
         [icon_button("Информация", "info", callback_data="info")],
+        [icon_button("Мастера", "profile", callback_data="about_master"),
+         icon_button("Портфолио", "media", callback_data="portfolio")],
     ])
 
 

@@ -16,9 +16,9 @@ MAIN_MENU_TEXT = f"{E.HOME} <b>Главное меню</b>\n\nВыберите �
 
 # ===== ЗАПИСЬ =====
 
-CHOOSE_BRANCH = f"{E.LOCATION} <b>Шаг 1 из 4 — Выбор филиала</b>\n\nВыберите филиал для записи:"
+CHOOSE_BRANCH = f"{E.LOCATION} <b>Шаг 1 из 6 — Выбор филиала</b>\n\nВыберите филиал для записи:"
 
-CHOOSE_MASTER = f"{E.BARBER} <b>Шаг 1 из 5 — Выбор мастера</b>\n\nВыберите мастера:"
+CHOOSE_MASTER = f"{E.BARBER} <b>Шаг 2 из 6 — Выбор мастера</b>\n\nВыберите мастера:"
 
 
 def master_selected(master_name: str, experience: str, specialization: str) -> str:
@@ -26,12 +26,12 @@ def master_selected(master_name: str, experience: str, specialization: str) -> s
         f"{E.CHECK} <b>Выбран:</b> {html_module.escape(master_name)}\n\n"
         f"{E.CHART} <b>Опыт:</b> {html_module.escape(experience)}\n"
         f"{E.TARGET} <b>Специализация:</b> {html_module.escape(specialization)}\n\n"
-        "<b>Шаг 2 из 5 — Выбор услуги</b>\n\nВыберите услугу:"
+        "<b>Шаг 3 из 6 — Выбор услуги</b>\n\nВыберите услугу:"
     )
 
 
 CHOOSE_SERVICE = (
-    f"{E.LIST} <b>Шаг 1 из 3 — Выбор услуги</b>\n\n"
+    f"{E.LIST} <b>Шаг 3 из 6 — Выбор услуги</b>\n\n"
     "Выберите услугу:"
 )
 
@@ -44,7 +44,7 @@ def service_selected(service_name: str, price: int, duration_minutes: int | None
         f"{E.CHECK} <b>Выбрана:</b> {html_module.escape(service_name)}\n"
         f"{E.MONEY} {price:,} ₸\n\n"
         f"{duration_line}"
-        f"<b>Шаг 2 из 3 — Выбор даты</b>\n\n"
+        f"<b>Шаг 4 из 6 — Выбор даты</b>\n\n"
         "Выберите удобный день:"
     )
 
@@ -58,13 +58,13 @@ CHOOSE_DATE = (
 def date_selected(date_formatted: str) -> str:
     return (
         f"{E.CHECK} <b>Выбрана дата:</b> {date_formatted}\n\n"
-        f"<b>Шаг 3 из 3 — Выбор времени</b>\n\n"
+        f"<b>Шаг 5 из 6 — Выбор времени</b>\n\n"
         "Выберите свободный слот:"
     )
 
 
 CHOOSE_TIME = (
-    f"{E.CLOCK} <b>Шаг 3 из 3 — Время</b>\n\n"
+    f"{E.CLOCK} <b>Шаг 5 из 6 — Время</b>\n\n"
     "Выберите свободный слот:"
 )
 

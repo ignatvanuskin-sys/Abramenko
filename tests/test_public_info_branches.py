@@ -14,8 +14,8 @@ def test_main_menu_exposes_requested_public_actions_only():
     callbacks = [button.callback_data for row in keyboard.inline_keyboard for button in row]
     labels = [button.text for row in keyboard.inline_keyboard for button in row]
 
-    assert callbacks == ["book", "prices", "my_bookings", "info"]
-    assert labels == ["Записаться", "Услуги и цены", "Мои записи", "Информация"]
+    assert callbacks == ["book", "prices", "my_bookings", "info", "about_master", "portfolio"]
+    assert labels == ["Записаться", "Услуги и цены", "Мои записи", "Информация", "Мастера", "Портфолио"]
 
 
 def test_branches_keyboard_contains_every_branch_and_back_button():
@@ -95,3 +95,36 @@ async def test_branches_callback_renders_branch_selector(monkeypatch):
     assert "Филиалы" in edit.await_args.args[1]
     assert edit.await_args.kwargs["reply_markup"].inline_keyboard[-1][0].callback_data == "main_menu"
     callback.answer.assert_awaited_once()
+
+
+
+def test_booking_step_labels_are_consistent_six_step_flow():
+    import messages
+
+    texts = [
+        messages.CHOOSE_BRANCH,
+        messages.CHOOSE_MASTER,
+        messages.master_selected("Мастер", "5 лет", "Маникюр"),
+        messages.service_selected("Маникюр", 1000),
+        messages.date_selected("понедельник, 1 января"),
+    ]
+    for step, text in enumerate(texts, start=1):
+        assert f"Шаг {step} из 6" in text
+
+
+def test_main_menu_has_direct_master_and_portfolio_actions():
+    keyboard = keyboards.main_menu_kb()
+    callbacks = [button.callback_data for row in keyboard.inline_keyboard for button in row]
+    assert callbacks[-2:] == ["about_master", "portfolio"]
+
+
+@pytest.mark.asyncio
+async def test_no_slots_callback_uses_plain_alert_emoji():
+    import handlers.booking as booking_handler
+
+    callback = SimpleNamespace(answer=AsyncMock())
+    await booking_handler.cb_no_slots(callback)
+    alert_text = callback.answer.await_args.args[0]
+    assert "<tg-emoji" not in alert_text
+    assert "❌" not in alert_text
+    assert "📦" in alert_text
