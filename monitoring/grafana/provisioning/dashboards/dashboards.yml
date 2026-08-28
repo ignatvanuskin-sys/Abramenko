@@ -1,0 +1,11 @@
+apiVersion: 1
+
+providers:
+  - name: nail-tg
+    orgId: 1
+    folder: nail-tg
+    type: file
+    disableDeletion: true
+    editable: false
+    options:
+      path: /var/lib/grafana/dashboards

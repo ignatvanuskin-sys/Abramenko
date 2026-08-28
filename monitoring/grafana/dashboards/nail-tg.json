@@ -1,0 +1,17 @@
+{
+  "title": "nail-tg production",
+  "uid": "nail-tg-prod",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "15s",
+  "time": {"from": "now-6h", "to": "now"},
+  "templating": {"list": []},
+  "panels": [
+    {"id": 1, "type": "stat", "title": "Uptime", "gridPos": {"x": 0, "y": 0, "w": 6, "h": 4}, "targets": [{"expr": "bot_uptime_seconds", "refId": "A"}], "fieldConfig": {"defaults": {"unit": "s"}}},
+    {"id": 2, "type": "stat", "title": "Errors total", "gridPos": {"x": 6, "y": 0, "w": 6, "h": 4}, "targets": [{"expr": "bot_errors_total", "refId": "A"}], "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"steps": [{"color": "green", "value": null}, {"color": "red", "value": 1}]}}}},
+    {"id": 3, "type": "timeseries", "title": "Booking operations", "gridPos": {"x": 0, "y": 4, "w": 12, "h": 8}, "targets": [{"expr": "bot_bookings_created", "legendFormat": "created"}, {"expr": "bot_bookings_cancelled", "legendFormat": "cancelled"}, {"expr": "bot_bookings_completed", "legendFormat": "completed"}]},
+    {"id": 4, "type": "timeseries", "title": "Operational failures", "gridPos": {"x": 12, "y": 0, "w": 12, "h": 12}, "targets": [{"expr": "bot_errors_total", "legendFormat": "errors"}, {"expr": "bot_reminders_failed", "legendFormat": "reminders failed"}, {"expr": "bot_broadcast_failed", "legendFormat": "broadcast failed"}, {"expr": "bot_api_retries", "legendFormat": "API retries"}]},
+    {"id": 5, "type": "timeseries", "title": "Traffic and rate limits", "gridPos": {"x": 0, "y": 12, "w": 12, "h": 8}, "targets": [{"expr": "bot_webhook_calls", "legendFormat": "webhook calls"}, {"expr": "bot_rate_limit_hits", "legendFormat": "rate limit hits"}]},
+    {"id": 6, "type": "timeseries", "title": "FSM and slots", "gridPos": {"x": 12, "y": 12, "w": 12, "h": 8}, "targets": [{"expr": "bot_slot_locks_acquired", "legendFormat": "locks acquired"}, {"expr": "bot_slot_locks_expired", "legendFormat": "locks expired"}, {"expr": "bot_fsm_state_cleared", "legendFormat": "FSM cleared"}]}
+  ]
+}

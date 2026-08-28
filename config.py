@@ -105,7 +105,14 @@ TIMEZONE = os.getenv("TIMEZONE", "Asia/Almaty")
 
 APP_ENV = os.getenv("APP_ENV", "development").strip().lower()
 BOT_MODE = os.getenv("BOT_MODE", "polling").strip().lower()
-WEBHOOK_URL = os.getenv("WEBHOOK_URL", "").strip().rstrip("/")
+PROXY_URL = os.getenv("PROXY_URL", "").strip()
+SENTRY_DSN = os.getenv("SENTRY_DSN", "").strip()
+SENTRY_ENVIRONMENT = os.getenv("SENTRY_ENVIRONMENT", APP_ENV).strip() or APP_ENV
+SENTRY_RELEASE = os.getenv("SENTRY_RELEASE", "nail-tg@local").strip() or "nail-tg@local"
+SENTRY_TRACES_SAMPLE_RATE = os.getenv("SENTRY_TRACES_SAMPLE_RATE", "0.05").strip()
+SENTRY_PROFILES_SAMPLE_RATE = os.getenv("SENTRY_PROFILES_SAMPLE_RATE", "0").strip()
+METRICS_TOKEN = os.getenv("METRICS_TOKEN", "").strip()
+WEBHOOK_URL = os.getenv("WEBHOOK_URL", "").strip()
 WEBHOOK_PATH = os.getenv("WEBHOOK_PATH", "/webhook").strip() or "/webhook"
 WEBHOOK_SECRET_TOKEN = os.getenv("SECRET_TOKEN", "").strip()
 WEBHOOK_HOST = os.getenv("WEBHOOK_HOST", "0.0.0.0")

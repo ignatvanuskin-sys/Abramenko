@@ -1,0 +1,17 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: nail-tg
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["bot:8080"]
+        labels:
+          service: nail-tg
+          environment: production
+    # If METRICS_TOKEN is configured on the bot, add this block using a
+    # deployment-mounted secret file (never commit the token):
+    # authorization:
+    #   type: Bearer
+    #   credentials_file: /etc/prometheus/secrets/metrics_token

@@ -25,6 +25,7 @@ from monitoring import (
     shutdown_monitoring,
     start_monitoring,
 )
+from observability import capture_exception, init_sentry, metrics_token_valid, prometheus_text
 from scheduler import shutdown_scheduler, start_scheduler
 from storage import delete_old_scheduler_jobs, init_db
 
@@ -131,6 +132,7 @@ def _register_dispatcher(dp: Dispatcher, bot: Bot) -> None:
         exc = event.exception
         err_text = "".join(_tb.format_exception(type(exc), exc, exc.__traceback__))[:3000]
         logger.error("Global error: %s", exc, exc_info=True)
+        capture_exception(exc, update_type=type(event.update).__name__)
 
         user_errors = (KeyError, ValueError, AttributeError)
         if not isinstance(exc, user_errors):
@@ -306,6 +308,40 @@ def _install_signal_handlers(stop_event: asyncio.Event) -> None:
                 signal.signal(sig, lambda *_: loop.call_soon_threadsafe(_stop))
 
 
+async def _run_metrics_server() -> None:
+    """Run health and Prometheus endpoints for polling deployments."""
+    from aiohttp import web
+
+    async def health_handler(request):
+        health = await get_health_status()
+        status = 200 if health.get("status") == "ok" else 503
+        return web.json_response(health, status=status)
+
+    async def metrics_handler(request):
+        if not metrics_token_valid(request.headers):
+            return web.Response(status=401, text="Unauthorized\\n")
+        from monitoring import get_metrics_snapshot
+        return web.Response(
+            text=prometheus_text(get_metrics_snapshot()),
+            content_type="text/plain",
+            headers={"Content-Type": "text/plain; version=0.0.4; charset=utf-8"},
+        )
+
+    app = web.Application()
+    app.router.add_get("/health", health_handler)
+    app.router.add_get("/ready", health_handler)
+    app.router.add_get("/metrics", metrics_handler)
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, config.WEBHOOK_HOST, config.WEBHOOK_PORT)
+    try:
+        await site.start()
+        logger.info("Metrics server listening on %s:%s", config.WEBHOOK_HOST, config.WEBHOOK_PORT)
+        await asyncio.Event().wait()
+    finally:
+        await runner.cleanup()
+
+
 async def _run_webhook(bot: Bot, dp: Dispatcher) -> None:
     config.validate_webhook_config()
 
@@ -327,23 +363,14 @@ async def _run_webhook(bot: Bot, dp: Dispatcher) -> None:
         return web.json_response(health, status=status)
 
     async def metrics_handler(request):
-        """MED-04 FIX: Prometheus-compatible /metrics endpoint."""
+        """Prometheus text exposition endpoint with optional bearer protection."""
+        if not metrics_token_valid(request.headers):
+            return web.Response(status=401, text="Unauthorized\n")
         from monitoring import get_metrics_snapshot
-        metrics = get_metrics_snapshot()
-        lines = []
-        # Format Prometheus-style metrics
-        for key, value in metrics.items():
-            if isinstance(value, (int, float)):
-                safe_key = key.replace("(", "").replace(")", "").replace(" ", "_")
-                lines.append(f"# HELP bot_{safe_key} {key}")
-                lines.append(f"# TYPE bot_{safe_key} gauge")
-                lines.append(f"bot_{safe_key} {value}")
-        lines.append(f"# HELP bot_uptime_seconds Bot uptime in seconds")
-        lines.append(f"# TYPE bot_uptime_seconds gauge")
-        lines.append(f"bot_uptime_seconds {metrics.get('uptime_seconds', 0)}")
         return web.Response(
-            text="\n".join(lines),
-            content_type="text/plain; charset=utf-8",
+            text=prometheus_text(get_metrics_snapshot()),
+            content_type="text/plain",
+            headers={"Content-Type": "text/plain; version=0.0.4; charset=utf-8"},
         )
 
     app.router.add_get("/health", health_handler)
@@ -376,14 +403,18 @@ async def main():
         logger.error("Configuration error: %s", e)
         return
 
+    init_sentry()
     bot = _create_bot()
     fsm_storage = await _create_fsm_storage()
     dp = Dispatcher(storage=fsm_storage)
     _register_dispatcher(dp, bot)
 
     shutdown_timeout = 30  # seconds
+    metrics_task = None
     try:
         await _startup(bot)
+        if config.BOT_MODE == "polling":
+            metrics_task = asyncio.create_task(_run_metrics_server())
         if config.BOT_MODE == "webhook":
             await _run_webhook(bot, dp)
         elif config.BOT_MODE == "polling":
@@ -394,6 +425,7 @@ async def main():
         logger.error("Bot operation timed out, shutting down...")
     except Exception as e:
         logger.critical(f"Fatal error in main loop: {e}", exc_info=True)
+        capture_exception(e, component="main_loop", bot_mode=config.BOT_MODE)
         # Notify admins even during fatal error
         try:
             from monitoring import increment_counter
@@ -406,6 +438,10 @@ async def main():
         except Exception:
             pass
     finally:
+        if metrics_task:
+            metrics_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await metrics_task
         try:
             await asyncio.wait_for(_shutdown(bot, dp), timeout=shutdown_timeout)
             logger.info("Graceful shutdown completed")
