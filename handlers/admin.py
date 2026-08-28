@@ -18,6 +18,7 @@ from aiogram.fsm.state import State, StatesGroup
 import messages
 import keyboards
 import config
+import external_sync
 import storage
 import scheduler
 from utils import send_with_retry, edit_with_retry
@@ -1319,6 +1320,7 @@ async def cb_admin_cancel_booking(callback: CallbackQuery, bot: Bot):
         booking = await storage.admin_cancel_booking(booking_id)
         if booking:
             await scheduler.cancel_reminders(booking_id)
+            await external_sync.sync_booking_cancelled(booking, booking_id)
             await _audit(callback.from_user.id, "booking_cancel", "booking", booking_id, old_value="active", new_value="cancelled")
             await edit_with_retry(
                 callback.message,

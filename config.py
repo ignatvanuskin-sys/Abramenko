@@ -120,6 +120,10 @@ WEBHOOK_PORT = _env_int("PORT", _env_int("WEBHOOK_PORT", 8080, minimum=1), minim
 POLLING_CONFLICT_RETRIES = _env_int("POLLING_CONFLICT_RETRIES", 24, minimum=1)
 POLLING_CONFLICT_RETRY_DELAY = _env_float("POLLING_CONFLICT_RETRY_DELAY", 5.0)
 REQUIRE_REDIS_FSM = _env_bool("REQUIRE_REDIS_FSM", APP_ENV in {"prod", "production"})
+EXTERNAL_SYNC_URL = os.getenv("EXTERNAL_SYNC_URL", "").strip()
+EXTERNAL_SYNC_SECRET = os.getenv("EXTERNAL_SYNC_SECRET", "").strip()
+EXTERNAL_SYNC_TIMEOUT = _env_float("EXTERNAL_SYNC_TIMEOUT", 8.0)
+EXTERNAL_SYNC_RETRIES = _env_int("EXTERNAL_SYNC_RETRIES", 3, minimum=1)
 
 # Основные плейсхолдеры бренда. Изменяйте здесь или через админ-панель бота.
 SALON_NAME = os.getenv("SALON_NAME", "Abramenko Studio").strip() or "Abramenko Studio"

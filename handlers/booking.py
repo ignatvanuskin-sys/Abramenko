@@ -9,6 +9,7 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup, Message
 
 import config
+import external_sync
 import keyboards
 import messages
 import scheduler
@@ -100,6 +101,7 @@ async def _finalize_booking(booking: dict, booking_id: str, send_fn, bot, discou
     bwi = booking.copy()
     bwi["id"] = booking_id
     await scheduler.schedule_reminders(bot, bwi)
+    await external_sync.sync_booking_created(booking, booking_id)
 
 
 async def _safe_edit(msg, text, reply_markup=None, parse_mode="HTML"):
@@ -325,7 +327,7 @@ async def cb_choose_branch(callback: CallbackQuery, state: FSMContext):
     except (ValueError, IndexError):
         await callback.answer(f"{P.CROSS} Филиал не найден", show_alert=True)
         return
-    await state.update_data(branch_index=branch_index)
+    await state.update_data(branch_index=branch_index, branch=BRANCHES[branch_index])
     await state.set_state(BookingStates.choose_master)
     await _safe_edit(
         callback.message,
@@ -593,6 +595,7 @@ async def cb_use_tg_name(callback: CallbackQuery, state: FSMContext):
         "telegram_id": telegram_id,
         "username": callback.from_user.username or "",
         "master": data["master"],
+        "branch": data.get("branch", ""),
         "service": data["service"],
         "price": final_price,
     }

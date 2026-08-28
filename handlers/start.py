@@ -8,9 +8,10 @@ from aiogram.filters import CommandStart, Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 
-import messages
-import keyboards
 import config
+import external_sync
+import keyboards
+import messages
 import storage
 import scheduler
 from utils import send_with_retry, edit_with_retry, notify_admins
@@ -341,6 +342,7 @@ async def cb_confirm_cancel(callback: CallbackQuery):
     # BUG-005 FIX: Removed duplicate callback.answer() at the end
     if booking:
         await scheduler.cancel_reminders(booking_id)
+        await external_sync.sync_booking_cancelled(booking, booking_id)
         # Возвращаем бонусы если были потрачены
         bonus_spent = booking.get('bonus_spent', 0) or 0
         if bonus_spent > 0:

@@ -35,7 +35,7 @@ async def test_booking_branch_selection_filters_specialists(monkeypatch):
 
     await booking.cb_choose_branch(callback, state)
 
-    state.update_data.assert_awaited_once_with(branch_index=1)
+    state.update_data.assert_awaited_once_with(branch_index=1, branch=BRANCHES[1])
     state.set_state.assert_awaited_once_with(booking.BookingStates.choose_master)
     keyboard = edit.await_args.kwargs["reply_markup"]
     labels = [button.text for row in keyboard.inline_keyboard for button in row]
