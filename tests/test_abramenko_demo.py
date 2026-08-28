@@ -23,7 +23,7 @@ def test_catalog_and_faq_are_confirmed_only():
         "Коррекция Total Blond", "Яркое/креативное окрашивание",
         "Коррекция сложных окрашиваний", "Контуринг и тонирование",
     ]
-    assert BRANCHES == ["AIRTOUCH — ул. Букетова, 61", "Мадам — ул. Жамбыла, 127"]
+    assert BRANCHES == ["Abramenko Studio — ул. Букетова, 61", "Мадам — ул. Жамбыла, 127"]
     assert all("администратор" in FAQ[key].lower() for key in ("prices",))
     assert "Букетова" in FAQ["info"] and "Жамбыла" in FAQ["info"]
     assert "Мастер" in FAQ["masters"] or "мастер" in FAQ["masters"]
@@ -44,7 +44,7 @@ def test_validation_and_html_contract():
 
 @pytest.mark.asyncio
 async def test_repository_persists_full_payload_and_is_idempotent(db):
-    payload = {"service": "AIRTOUCH", "branch": "AIRTOUCH — ул. Букетова, 61", "date": "15.09", "time": "12:00", "name": "Анна", "phone": "+77001234567", "master": None, "hair_length": "до плеч"}
+    payload = {"service": "AIRTOUCH", "branch": "Abramenko Studio — ул. Букетова, 61", "date": "15.09", "time": "12:00", "name": "Анна", "phone": "+77001234567", "master": None, "hair_length": "до плеч"}
     first, second = await asyncio.gather(
         demo_repository.create_or_get_request("booking", 42, payload, "same-key"),
         demo_repository.create_or_get_request("booking", 42, payload, "same-key"),
@@ -71,7 +71,7 @@ async def test_booking_order_phone_to_master_then_coloring_questions():
 async def test_finish_empty_admin_persists_and_does_not_claim_sent(monkeypatch, db):
     monkeypatch.setattr(demo.config, "DEMO_ADMIN_CHAT_ID", None)
     message = make_message(user_id=7)
-    state = make_fsm(data={"name": "Анна", "phone": "+77001234567", "branch": "AIRTOUCH — ул. Букетова, 61"})
+    state = make_fsm(data={"name": "Анна", "phone": "+77001234567", "branch": "Abramenko Studio — ул. Букетова, 61"})
     await demo.finish(message, state, "Стать моделью", "model")
     request_id = (await demo_repository.create_or_get_request(
         "model", 7, demo.normalized_payload(await state.get_data()),
@@ -88,7 +88,7 @@ async def test_finish_empty_admin_persists_and_does_not_claim_sent(monkeypatch, 
 async def test_finish_send_failure_records_error(monkeypatch, db):
     monkeypatch.setattr(demo.config, "DEMO_ADMIN_CHAT_ID", 99)
     message = make_message(user_id=7); message.bot.send_message.side_effect = RuntimeError("offline")
-    data = {"name": "Анна", "phone": "+77001234567", "branch": "AIRTOUCH — ул. Букетова, 61"}
+    data = {"name": "Анна", "phone": "+77001234567", "branch": "Abramenko Studio — ул. Букетова, 61"}
     state = make_fsm(data=data)
     await demo.finish(message, state, "Вакансия", "vacancy")
     payload = demo.normalized_payload(data)

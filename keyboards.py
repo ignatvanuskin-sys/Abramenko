@@ -23,10 +23,10 @@ def _safe_cb(prefix: str, value: str, max_bytes: int = 62) -> str:
 def main_menu_kb() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [icon_button("Записаться", "calendar", callback_data="demo_book")],
-        [icon_button("Мои записи", "file", callback_data="my_bookings")],
-        [icon_button("Мастера", "people", callback_data="demo_faq:masters")],
-        [icon_button("Услуги и цены", "money", callback_data="demo_faq:prices")],
-        [icon_button("О нас", "info", callback_data="demo_faq:info")],
+        [icon_button("Мои записи", "file", callback_data="my_bookings"),
+         icon_button("Мастера", "people", callback_data="demo_faq:masters")],
+        [icon_button("Услуги и цены", "money", callback_data="demo_faq:prices"),
+         icon_button("О нас", "info", callback_data="demo_faq:info")],
     ])
 
 

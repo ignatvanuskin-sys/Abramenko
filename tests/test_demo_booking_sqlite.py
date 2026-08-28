@@ -13,7 +13,7 @@ from tz_utils import get_now
 
 DATE = "2099-01-05"
 TIME = "12:00"
-BRANCH_1 = "AIRTOUCH — ул. Букетова, 61|Любой мастер"
+BRANCH_1 = "Abramenko Studio — ул. Букетова, 61|Любой мастер"
 BRANCH_2 = "Мадам — ул. Жамбыла, 127|Любой мастер"
 
 
