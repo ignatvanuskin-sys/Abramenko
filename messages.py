@@ -16,6 +16,18 @@ MAIN_MENU_TEXT = f"{E.HOME} <b>Главное меню</b>\n\nВыберите �
 
 # ===== ЗАПИСЬ =====
 
+CHOOSE_MASTER = f"{E.BARBER} <b>Шаг 1 из 5 — Выбор мастера</b>\n\nВыберите мастера:"
+
+
+def master_selected(master_name: str, experience: str, specialization: str) -> str:
+    return (
+        f"{E.CHECK} <b>Выбран:</b> {html_module.escape(master_name)}\n\n"
+        f"{E.CHART} <b>Опыт:</b> {html_module.escape(experience)}\n"
+        f"{E.TARGET} <b>Специализация:</b> {html_module.escape(specialization)}\n\n"
+        "<b>Шаг 2 из 5 — Выбор услуги</b>\n\nВыберите услугу:"
+    )
+
+
 CHOOSE_SERVICE = (
     f"{E.LIST} <b>Шаг 1 из 3 — Выбор услуги</b>\n\n"
     "Выберите услугу:"

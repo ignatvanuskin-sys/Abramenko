@@ -8,6 +8,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import keyboards
 import config
+import messages
 
 
 class TestMainMenuKeyboard:
@@ -15,10 +16,9 @@ class TestMainMenuKeyboard:
     def test_main_menu_has_expected_buttons(self):
         kb = keyboards.main_menu_kb()
         texts = " ".join(b.text for row in kb.inline_keyboard for b in row)
-        assert texts == "Информация Филиалы"
-        # Booking, profile, and promotional actions are intentionally absent
-        # from the public menu; administrators retain their separate panel.
-        assert "Записаться" not in texts
+        assert texts == "Записаться Информация Филиалы"
+        # Only booking, information, and branches remain in the public menu.
+        assert "Записаться" in texts
         assert "Мои записи" not in texts
         assert "Мастера" not in texts
         assert "Услуги и цены" not in texts
@@ -33,7 +33,8 @@ class TestMainMenuKeyboard:
         assert "Вакансии" not in texts
         assert "Стать моделью" not in texts
         assert "Курс «Колорист с нуля»" not in texts
-        # Should be compact: 2 buttons per row, not 6 in one column
+        # Should be compact: no row contains more than 2 buttons.
+
         assert all(len(row) <= 2 for row in kb.inline_keyboard)
 
 
@@ -115,7 +116,7 @@ class TestTimeSlotsKeyboard:
 
 class TestBookingFlowWithoutMasterSelection:
 
-    async def test_cb_book_skips_master_and_shows_services(self, db):
+    async def test_cb_book_starts_master_selection(self, db):
         from handlers.booking import cb_book
         import storage
 
@@ -138,8 +139,7 @@ class TestBookingFlowWithoutMasterSelection:
              patch("handlers.booking.config.MAX_BOOKING_ATTEMPTS", 10):
             await cb_book(cb, state)
 
-        # Should set state to choose_service and master is auto-selected
+        # The source flow starts with explicit master selection.
         state.set_state.assert_called()
-        state.update_data.assert_called()
-        args = state.update_data.call_args[1] or state.update_data.call_args[0][0]
-        assert args.get("master") == config.MASTER_NAME
+        state.update_data.assert_not_called()
+        assert cb.message.edit_text.await_args.args[0] == messages.CHOOSE_MASTER

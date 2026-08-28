@@ -21,11 +21,20 @@ def _safe_cb(prefix: str, value: str, max_bytes: int = 62) -> str:
 
 
 def main_menu_kb() -> InlineKeyboardMarkup:
-    """Public menu: only general information and branch navigation."""
+    """Public menu: booking plus general information and branch navigation."""
     return InlineKeyboardMarkup(inline_keyboard=[
+        [icon_button("Записаться", "calendar", callback_data="book")],
         [icon_button("Информация", "info", callback_data="info")],
         [icon_button("Филиалы", "location", callback_data="branches")],
     ])
+
+
+def masters_kb() -> InlineKeyboardMarkup:
+    """Select a master before choosing a service."""
+    masters = list(config.MASTERS.keys()) if isinstance(config.MASTERS, dict) else [item[0] for item in config.MASTERS]
+    rows = [[icon_button(name, "profile", callback_data=f"master:{i}")] for i, name in enumerate(masters)]
+    rows.append([icon_button("Назад в меню", callback_data="main_menu")])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
 def branches_kb(branches: list[str]) -> InlineKeyboardMarkup:
@@ -36,7 +45,7 @@ def branches_kb(branches: list[str]) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
-async def services_kb(back: str = "main_menu") -> InlineKeyboardMarkup:
+async def services_kb(back: str = "main_menu", master_name: str | None = None) -> InlineKeyboardMarkup:
     """Service selection — only service name (no price, doesn't fit)."""
     service_list = list(config.SERVICES.keys())
     buttons = []

@@ -16,6 +16,7 @@ import keyboards
 from config import BOT_TOKEN, load_config_from_db
 from emoji_config import E
 from handlers.admin import router as admin_router
+from handlers.booking import router as booking_router
 from handlers.info import router as info_router
 from handlers.start import router as start_router
 from middleware import AdminCheckMiddleware, RateLimitMiddleware
@@ -101,6 +102,7 @@ def _register_dispatcher(dp: Dispatcher, bot: Bot) -> None:
     dp.callback_query.middleware(AdminCheckMiddleware())
 
     dp.include_router(start_router)
+    dp.include_router(booking_router)
     dp.include_router(info_router)
     # Admin routes remain available to configured administrators; public users
     # see only information and branch navigation.

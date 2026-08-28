@@ -8,13 +8,13 @@ import keyboards
 from studio_data import BRANCHES, MASTERS
 
 
-def test_main_menu_exposes_only_information_and_branches():
+def test_main_menu_exposes_booking_information_and_branches_only():
     keyboard = keyboards.main_menu_kb()
     callbacks = [button.callback_data for row in keyboard.inline_keyboard for button in row]
     labels = [button.text for row in keyboard.inline_keyboard for button in row]
 
-    assert callbacks == ["info", "branches"]
-    assert labels == ["Информация", "Филиалы"]
+    assert callbacks == ["book", "info", "branches"]
+    assert labels == ["Записаться", "Информация", "Филиалы"]
 
 
 def test_branches_keyboard_contains_every_branch_and_back_button():
